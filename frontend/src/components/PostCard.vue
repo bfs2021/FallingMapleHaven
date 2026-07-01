@@ -84,7 +84,7 @@ function goToProfile() {
       <button
         v-if="authStore.user && (authStore.user.user_id === post.user?.user_id || authStore.user.user_id === post.user?.id || authStore.isAdmin)"
         @click="deletePost"
-        class="text-xs text-red-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2 cursor-pointer"
+        class="px-2 py-1 text-xs text-red-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2 cursor-pointer rounded"
       >
         删除
       </button>

@@ -41,7 +41,6 @@ const routes = [
     path: '/profile/:userId/guestbook',
     name: 'Guestbook',
     component: () => import('@/views/GuestbookPage.vue'),
-    meta: { requiresAuth: true },
   },
   {
     path: '/friends',

@@ -96,7 +96,7 @@ function goBack() {
     <div class="flex items-center gap-3 px-4 py-3 bg-white border-b border-border flex-shrink-0">
       <button
         @click="goBack"
-        class="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-maple-600 hover:bg-maple-50 rounded-lg transition-colors cursor-pointer"
+        class="w-10 h-10 flex items-center justify-center text-text-secondary hover:text-maple-600 hover:bg-maple-50 rounded-lg transition-colors cursor-pointer"
       >
         ‹
       </button>
@@ -141,7 +141,7 @@ function goBack() {
         <button
           @click="sendMessage"
           :disabled="sending || !messageInput.trim()"
-          class="px-5 py-2.5 bg-maple-600 text-white text-sm rounded-xl hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
+          class="px-5 py-3 bg-maple-600 text-white text-sm rounded-xl hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
         >
           发送
         </button>

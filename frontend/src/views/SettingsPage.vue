@@ -26,6 +26,7 @@ const passwordSaved = ref(false)
 const passwordSaving = ref(false)
 const passwordError = ref('')
 
+const showPassword = ref(false)
 const avatarUploading = ref(false)
 const toast = useToast()
 const coverUploading = ref(false)
@@ -156,7 +157,7 @@ async function changePassword() {
           <button
             @click="triggerUpload('cover')"
             :disabled="coverUploading"
-            class="px-4 py-1.5 bg-black/40 text-white text-sm rounded-lg hover:bg-black/50 transition-colors"
+            class="px-4 py-2.5 bg-black/40 text-white text-sm rounded-lg hover:bg-black/50 transition-colors"
           >
             {{ coverUploading ? '上传中...' : '更换封面' }}
           </button>
@@ -170,7 +171,7 @@ async function changePassword() {
         <button
           @click="triggerUpload('avatar')"
           :disabled="avatarUploading"
-          class="px-4 py-1.5 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-60"
+          class="px-4 py-2.5 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-60"
         >
           {{ avatarUploading ? '上传中...' : '更换头像' }}
         </button>
@@ -200,11 +201,11 @@ async function changePassword() {
         <input v-model="real_name" type="text" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
       </div>
       <div class="flex items-center gap-3 py-1">
-        <label class="text-sm font-medium text-text-primary">公开真实姓名</label>
+        <span class="text-sm font-medium text-text-primary cursor-pointer select-none" @click="show_real_name = !show_real_name">公开真实姓名</span>
         <ToggleSwitch v-model="show_real_name" />
       </div>
       <div class="flex items-center gap-3 py-1">
-        <label class="text-sm font-medium text-text-primary">足迹对外可见</label>
+        <span class="text-sm font-medium text-text-primary cursor-pointer select-none" @click="visitor_public = !visitor_public">足迹对外可见</span>
         <ToggleSwitch v-model="visitor_public" />
       </div>
 
@@ -212,7 +213,7 @@ async function changePassword() {
         <button
           @click="saveProfile"
           :disabled="profileSaving"
-          class="px-6 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-60"
+          class="px-6 py-2.5 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-60"
         >
           {{ profileSaving ? '保存中...' : '保存' }}
         </button>
@@ -223,19 +224,29 @@ async function changePassword() {
 
     <!-- 修改密码 -->
     <div class="bg-white rounded-2xl shadow-sm border border-border p-6 space-y-5">
-      <h2 class="text-lg font-semibold text-text-primary">修改密码</h2>
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-text-primary">修改密码</h2>
+        <button
+          type="button"
+          @click="showPassword = !showPassword"
+          class="text-text-secondary hover:text-maple-600 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-maple-50"
+          :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+        >
+          <Icon :name="showPassword ? 'eyeOff' : 'eye'" :size="18" />
+        </button>
+      </div>
 
       <div>
         <label class="block text-sm font-medium text-text-primary mb-1.5">旧密码</label>
-        <input v-model="oldPassword" type="password" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
+        <input v-model="oldPassword" :type="showPassword ? 'text' : 'password'" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
       </div>
       <div>
         <label class="block text-sm font-medium text-text-primary mb-1.5">新密码</label>
-        <input v-model="newPassword" type="password" placeholder="至少8位" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
+        <input v-model="newPassword" :type="showPassword ? 'text' : 'password'" placeholder="至少8位" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
       </div>
       <div>
         <label class="block text-sm font-medium text-text-primary mb-1.5">确认新密码</label>
-        <input v-model="confirmNewPassword" type="password" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
+        <input v-model="confirmNewPassword" :type="showPassword ? 'text' : 'password'" class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600" />
       </div>
 
       <p v-if="passwordError" class="text-red-500 text-sm">{{ passwordError }}</p>
@@ -244,7 +255,7 @@ async function changePassword() {
       <button
         @click="changePassword"
         :disabled="passwordSaving"
-        class="px-6 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-60"
+        class="px-6 py-2.5 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-60"
       >
         {{ passwordSaving ? '修改中...' : '修改密码' }}
       </button>

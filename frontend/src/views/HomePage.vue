@@ -110,7 +110,7 @@ function switchTag(tag) {
         v-for="tag in tags"
         :key="tag.key"
         @click="switchTag(tag.key)"
-        class="px-4 py-1.5 text-sm rounded-full whitespace-nowrap transition-all duration-150 ease-out cursor-pointer min-h-[36px]"
+        class="px-4 py-1.5 text-sm rounded-full whitespace-nowrap transition-all duration-150 ease-out cursor-pointer min-h-[44px]"
         :class="activeTag === tag.key ? 'bg-maple-600 text-white shadow-sm' : 'bg-white text-text-secondary border border-border hover:border-maple-300 hover:text-maple-600'"
       >
         {{ tag.label }}

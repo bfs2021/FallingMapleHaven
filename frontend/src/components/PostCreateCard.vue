@@ -91,7 +91,7 @@ async function submitPost() {
         <img :src="img.url" class="w-full h-full object-cover" />
         <button
           @click="removeImage(i)"
-          class="absolute top-1 right-1 w-6 h-6 bg-black/50 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          class="absolute top-1 right-1 w-8 h-8 bg-black/50 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
         >
           <Icon name="x" :size="12" />
         </button>

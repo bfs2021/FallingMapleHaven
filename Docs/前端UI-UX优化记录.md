@@ -575,3 +575,71 @@ let resolveCallback = null
 | 小三角 | 菜单上方 `absolute -top-1.5 right-6` 旋转 45° 白色小方块，仿气泡指示 |
 | 按反馈 | 按钮 `active:scale-[0.97]` 按下缩放 |
 | 交互增强 | 菜单项 hover 时加粗文字：`hover:text-maple-700` |
+
+## 11. 移动端 UI/UX 修复计划
+
+### 11.1 紧急（影响功能可用性）
+
+| 优先级 | 问题 | 文件 | 修复方案 |
+|--------|------|------|----------|
+| P0 | `safe-area-bottom` class 未定义 | `MobileTabBar.vue` + `main.css` | 在 `main.css` 定义 `.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }` |
+| P0 | 评论输入框/发送按钮触控区过小（~28px） | `CommentSection.vue` | `py-1.5` 改为 `py-2.5`，确保高度 >= 44px |
+| P0 | 删除图片按钮仅 24×24px | `PostCreateCard.vue` | 扩大至 `w-8 h-8`（32px）或 `w-10 h-10`（40px） |
+
+### 11.2 重要（触控体验优化）
+
+| 优先级 | 问题 | 文件 | 修复方案 |
+|--------|------|------|----------|
+| P1 | 设计系统按钮/输入框缺少 `min-height: 44px` | `main.css` | 给 `btn-primary`、`btn-secondary`、`btn-ghost`、`input-base` 添加 `min-h-11`（44px） |
+| P1 | BottomSheet 移动端无最大高度限制 | `BottomSheet.vue` | 无 `md:` 前缀时添加 `max-h-[90dvh]` |
+| P1 | 聊天页发送/返回按钮 < 44px | `ChatRoomPage.vue` | 发送按钮 `py-2.5`→`py-3`；返回按钮 `w-8 h-8`→`w-10 h-10` |
+| P1 | 首页标签筛选按钮 36px | `HomePage.vue` | `min-h-[36px]`→`min-h-[44px]` |
+| P1 | 设置页保存/换头像按钮过小 | `SettingsPage.vue` | `py-2`→`py-2.5`，`py-1.5`→`py-2.5` |
+| P1 | PostCard 删除按钮无触控区 | `PostCard.vue` | 添加 `px-2 py-1` 最小触控区 |
+
+### 11.3 次要（体验细节）
+
+| 优先级 | 问题 | 文件 | 修复方案 |
+|--------|------|------|----------|
+| P2 | BottomSheet 关闭按钮 32px | `BottomSheet.vue` | `w-8 h-8`→`w-10 h-10` |
+| P2 | ProfilePage 后台按钮 26px | `ProfilePage.vue` | 使用 `btn-ghost` 或添加 padding |
+| P2 | 标签滚动无溢出渐变提示 | `HomePage.vue` | 在 `overflow-x-auto` 容器添加左右渐变遮罩 |
+| P2 | 设置页标签不联动 ToggleSwitch | `SettingsPage.vue` | 标签添加 `@click` 或使用 `label for` 关联 |
+| P2 | 设置页密码字段无显示切换 | `SettingsPage.vue` | 添加 show/hide 密码切换按钮 |
+| P2 | 全局缺少 safe-area 适配 | `App.vue` / 各页面 | 在固定/底部元素添加 `pb-[env(safe-area-inset-bottom)]` |
+
+### 11.4 各文件改动清单
+
+```
+mobile/  (移动端修复计划)
+├── main.css
+│   ├── + .safe-area-bottom { ... }
+│   ├── + btn-primary: min-h-11
+│   ├── + btn-secondary: min-h-11
+│   ├── + btn-ghost: min-h-11
+│   └── + input-base: min-h-11
+├── MobileTabBar.vue
+│   └── + safe-area-bottom class 定义
+├── CommentSection.vue
+│   ├── input: py-1.5 → py-2.5
+│   └── send button: py-1.5 → py-2.5
+├── PostCreateCard.vue
+│   └── image remove button: w-6 h-6 → w-8 h-8
+├── BottomSheet.vue
+│   ├── + max-h-[90dvh] (no md:)
+│   └── close button: w-8 h-8 → w-10 h-10
+├── ChatRoomPage.vue
+│   ├── send button: py-2.5 → py-3
+│   └── back button: w-8 h-8 → w-10 h-10
+├── HomePage.vue
+│   ├── tag button: min-h-[36px] → min-h-[44px]
+│   └── + scroll fade gradient (可选)
+├── SettingsPage.vue
+│   ├── save button: py-2 → py-2.5
+│   ├── cover/avatar button: py-1.5 → py-2.5
+│   └── + password visibility toggle
+├── PostCard.vue
+│   └── delete button: + px-2 py-1
+└── ProfilePage.vue
+    └── admin button: + btn-ghost or extra padding
+```

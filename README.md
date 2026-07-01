@@ -242,8 +242,7 @@ npm run dev
 │       │   └── useConfirm.js              # 确认对话框
 │       │
 │       ├── utils/                         # 工具函数
-│       │   ├── time.js                    # 时间格式化
-│       │   └── ...
+│       │   └── time.js                    # 时间格式化
 │       │
 │       └── assets/                        # 全局样式
 │           └── main.css                   # Tailwind 入口 + 自定义样式
@@ -348,8 +347,8 @@ npm run dev
 |------|------|------|
 | GET | `/chat/rooms/` | 获取聊天列表 |
 | POST | `/chat/rooms/create/` | 创建私聊/群聊房间 |
-| GET | `/chat/rooms/{id}/messages/` | 获取消息历史 |
-| POST | `/chat/rooms/{id}/messages/send/` | 发送消息（REST 后备） |
+| GET | `/chat/rooms/{room_id}/messages/` | 获取消息历史 |
+| POST | `/chat/rooms/{room_id}/messages/send/` | 发送消息（REST 后备） |
 | WS | `/ws/chat/` | WebSocket 实时聊天 |
 
 ### 小组模块
@@ -362,7 +361,7 @@ npm run dev
 | PATCH | `/groups/{id}/update/` | 更新小组信息（组长） |
 | POST | `/groups/{id}/join/` | 加入小组 |
 | POST | `/groups/{id}/leave/` | 退出小组 |
-| POST | `/groups/{id}/members/{uid}/` | 管理成员（组长） |
+| POST | `/groups/{id}/members/{user_id}/` | 管理成员（组长） |
 | GET | `/groups/{id}/posts/` | 获取小组动态 |
 
 ### 插件模块
@@ -373,7 +372,7 @@ npm run dev
 | GET | `/plugins/quiz/questions/received/` | 我收到的题目 |
 | POST | `/plugins/quiz/questions/{id}/answer/` | 答题 |
 | GET | `/plugins/quiz/result/{friend_id}/` | 获取与好友的匹配度 |
-| DELETE | `/plugins/quiz/questions/{id}/` | 删除题目 |
+| DELETE | `/plugins/quiz/questions/{id}/delete/` | 删除题目 |
 | POST | `/plugins/question-box/` | 匿名提问 |
 | GET | `/plugins/question-box/inbox/` | 我收到的提问 |
 | POST | `/plugins/question-box/{id}/answer/` | 回答提问 |

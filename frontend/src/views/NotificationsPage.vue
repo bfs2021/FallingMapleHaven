@@ -1,17 +1,16 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { notificationApi } from '@/api/notifications'
 import { relativeTime } from '@/utils/time'
-import AvatarImage from '@/components/AvatarImage.vue'
-import { useRouter } from 'vue-router'
+import Icon from '@/components/Icon.vue'
 
-const authStore = useAuthStore()
 const router = useRouter()
+const authStore = useAuthStore()
 
 const notifications = ref([])
-const loading = ref(true)
-const unreadCount = ref(0)
+const loading = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
 const pollingInterval = ref(null)
@@ -42,12 +41,16 @@ function stopPolling() {
 
 async function fetchUnreadCount() {
   try {
-    const res = await notificationApi.pending()
-    if (res.data) {
-      unreadCount.value = res.data.count || 0
-      notifications.value = res.data?.results || res.data || []
+    const [listRes, countRes] = await Promise.all([
+      notificationApi.list({ page: 1, page_size: 20 }),
+      notificationApi.unreadCount(),
+    ])
+    if (listRes.data?.results) {
+      notifications.value = listRes.data.results
       page.value = 1
+      hasMore.value = listRes.data.page * listRes.data.page_size < listRes.data.total
     }
+    authStore.setUnreadCount(countRes.data?.count || 0)
   } catch { /* ignore */ }
 }
 
@@ -68,43 +71,40 @@ async function fetchNotifications(reset = false) {
     } else {
       hasMore.value = false
     }
-    if (!reset) page.value += 1
+    page.value += 1
   } catch { /* ignore */ } finally {
     loading.value = false
   }
 }
 
-async function markAsRead(notif) {
-  if (notif.is_read) return
+async function markRead(n) {
+  if (n.is_read) return
   try {
-    await notificationApi.markRead(notif.id)
-    notif.is_read = true
-    unreadCount.value = Math.max(0, unreadCount.value - 1)
+    await notificationApi.read(n.id)
+    n.is_read = true
+    const current = authStore.user?.unread_count || 0
+    authStore.setUnreadCount(Math.max(0, current - 1))
   } catch { /* ignore */ }
 }
 
 async function markAllRead() {
   try {
-    await notificationApi.markAllRead()
+    await notificationApi.readAll()
     notifications.value.forEach(n => n.is_read = true)
-    unreadCount.value = 0
+    authStore.setUnreadCount(0)
   } catch { /* ignore */ }
 }
 
-function handleNotificationClick(notif) {
-  markAsRead(notif)
-  if (notif.data?.url) {
-    router.push(notif.data.url)
+function handleNotificationClick(n) {
+  markRead(n)
+  if (n.link && n.link !== '#') {
+    router.push(n.link)
   }
 }
 
-function getNotificationIcon(type) {
-  switch (type) {
-    case 'like': return '❤️'
-    case 'comment': return '💬'
-    case 'follow': return '👤'
-    default: return '🔔'
-  }
+function notificationIcon(type) {
+  const icons = { like: 'heart', comment: 'messageCircle', reply: 'messageSquare', friend_request: 'userPlus', friend_accepted: 'userCheck', system: 'bell', quiz_invite: 'helpCircle', anonymous_question: 'messageSquare' }
+  return icons[type] || 'bell'
 }
 </script>
 
@@ -115,47 +115,60 @@ function getNotificationIcon(type) {
       <button
         v-if="notifications.some(n => !n.is_read)"
         @click="markAllRead"
-        class="text-sm text-maple-600 hover:text-maple-700 transition-colors cursor-pointer"
+        class="btn-ghost px-3 py-1.5 text-sm"
       >
-        全部标为已读
+        <Icon name="check" :size="14" /> 全部标为已读
       </button>
     </div>
 
-    <div v-if="loading && !notifications.length" class="text-center text-text-secondary py-12">
-      加载中...
+    <div v-if="loading && !notifications.length" class="space-y-2">
+      <div v-for="i in 5" :key="i" class="card-base p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full skeleton" />
+        <div class="flex-1 space-y-2">
+          <div class="h-3 w-3/4 skeleton" />
+          <div class="h-2.5 w-1/2 skeleton" />
+        </div>
+      </div>
     </div>
 
     <div v-else-if="!notifications.length" class="text-center py-16 text-text-secondary">
-      暂无通知
+      <Icon name="bell" :size="48" class="mx-auto mb-3 text-maple-300" />
+      <p>暂无通知</p>
     </div>
 
     <div v-else class="space-y-2">
       <div
-        v-for="notif in notifications"
-        :key="notif.id"
-        @click="handleNotificationClick(notif)"
-        class="flex items-center gap-3 p-4 bg-white rounded-xl border border-border hover:border-maple-300 transition-colors cursor-pointer"
-        :class="{ 'border-l-4 border-l-maple-500': !notif.is_read }"
+        v-for="n in notifications"
+        :key="n.id"
+        @click="handleNotificationClick(n)"
+        class="flex items-center gap-3 p-4 transition-all duration-200"
+        :class="n.is_read
+          ? 'bg-maple-50/30 border border-maple-100/50 rounded-2xl cursor-default'
+          : 'card-base cursor-pointer border-l-[3px] border-l-maple-500'"
       >
-        <AvatarImage :user="notif.actor" size="sm" />
-        <div class="flex-1 min-w-0">
-          <p class="text-sm text-text-primary" :class="{ 'font-semibold': !notif.is_read }">
-            <span class="font-medium">{{ notif.actor?.nickname || '用户' }}</span>
-            {{ notif.verb }}
-            <span v-if="notif.action_object" class="text-text-secondary">{{ notif.action_object }}</span>
-          </p>
-          <p v-if="notif.description" class="text-xs text-text-secondary mt-0.5 truncate">{{ notif.description }}</p>
-          <p class="text-xs text-text-tertiary mt-1">{{ relativeTime(notif.created_at) }}</p>
+        <div
+          class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+          :class="n.is_read ? 'bg-maple-100/50' : 'bg-maple-100'"
+        >
+          <Icon :name="notificationIcon(n.type)" :size="18" :class="n.is_read ? 'text-maple-400' : 'text-maple-600'" />
         </div>
-        <span v-if="!notif.is_read" class="w-2 h-2 rounded-full bg-maple-500 flex-shrink-0" />
+        <div class="flex-1 min-w-0">
+          <p class="text-sm" :class="n.is_read ? 'text-text-secondary' : 'text-text-primary font-semibold'">
+            {{ n.title }}
+          </p>
+          <p v-if="n.content" class="text-xs text-text-secondary mt-1">{{ n.content }}</p>
+          <p class="text-xs text-text-tertiary mt-1">{{ relativeTime(n.created_at) }}</p>
+        </div>
+        <span v-if="!n.is_read" class="w-2 h-2 rounded-full bg-maple-500 flex-shrink-0" />
       </div>
 
       <button
         v-if="hasMore"
         @click="fetchNotifications(false)"
         :disabled="loading"
-        class="w-full text-center text-sm text-maple-600 hover:text-maple-700 py-3 cursor-pointer"
+        class="btn-ghost w-full justify-center py-3"
       >
+        <Icon name="chevronDown" :size="14" />
         {{ loading ? '加载中...' : '加载更多' }}
       </button>
     </div>

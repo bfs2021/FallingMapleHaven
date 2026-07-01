@@ -185,7 +185,7 @@ function onFriendStatusChanged(status) {
     <div v-if="authStore.isAdmin && userId !== authStore.user?.user_id" class="px-4 mt-4">
       <button
         @click="toggleAdminPanel"
-        class="text-sm text-red-600 border border-red-300 px-3 py-1 rounded hover:bg-red-50"
+        class="text-sm text-red-600 border border-red-300 px-3 py-2 rounded hover:bg-red-50"
       >
         {{ showAdminPanel ? '收起管理面板' : '⚙ 管理用户' }}
       </button>
@@ -202,7 +202,7 @@ function onFriendStatusChanged(status) {
         </div>
         <button
           @click="toggleUserBan"
-          class="mt-2 px-3 py-1 rounded text-white text-xs"
+          class="mt-2 px-3 py-2 rounded text-white text-xs"
           :class="adminInfo.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'"
         >
           {{ adminInfo.is_active ? '封禁此用户' : '解封此用户' }}
