@@ -205,12 +205,12 @@ class QuizLeaderboardView(APIView):
         from django.db.models import Q
 
         friends = Friendship.objects.filter(
-            Q(sender=request.user, status="accepted") |
-            Q(receiver=request.user, status="accepted")
+            Q(from_user=request.user, status="accepted") |
+            Q(to_user=request.user, status="accepted")
         )
         friend_ids = set()
         for f in friends:
-            friend_ids.add(f.sender_id if f.receiver == request.user else f.receiver_id)
+            friend_ids.add(f.from_user_id if f.to_user == request.user else f.to_user_id)
 
         results = QuizResult.objects.filter(
             (Q(user_a=request.user) & Q(user_b_id__in=friend_ids)) |
