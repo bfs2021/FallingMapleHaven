@@ -7,8 +7,8 @@ from django.dispatch import receiver
 class User(AbstractUser):
     nickname = models.CharField(max_length=50)
     real_name = models.CharField(max_length=50, blank=True, null=True)
-    avatar = models.FileField(upload_to="avatars/", blank=True, null=True)
-    cover_image = models.FileField(upload_to="covers/", blank=True, null=True)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    cover_image = models.ImageField(upload_to="covers/", blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 

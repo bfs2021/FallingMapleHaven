@@ -43,7 +43,7 @@ class PostImage(models.Model):
     post = models.ForeignKey(
         Post, on_delete=models.CASCADE, related_name="images"
     )
-    image = models.FileField(upload_to="feed/images/")
+    image = models.ImageField(upload_to="feed/images/")
     order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
