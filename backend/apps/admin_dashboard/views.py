@@ -49,8 +49,19 @@ class AdminUserListView(APIView, AdminPermissionMixin):
                 | Q(email__icontains=search)
             )
         users = users.order_by("-date_joined")
-        serializer = AdminUserSerializer(users, many=True)
-        return api_response(data=serializer.data)
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = users.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_users = users[start:end]
+        serializer = AdminUserSerializer(page_users, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminUserUpdateView(APIView, AdminPermissionMixin):
@@ -93,8 +104,19 @@ class AdminPostListView(APIView, AdminPermissionMixin):
             return error
 
         posts = Post.objects.all().order_by("-created_at")
-        serializer = AdminPostSerializer(posts, many=True)
-        return api_response(data=serializer.data)
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = posts.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_posts = posts[start:end]
+        serializer = AdminPostSerializer(page_posts, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminPostDeleteView(APIView, AdminPermissionMixin):
@@ -131,8 +153,19 @@ class AdminCommentListView(APIView, AdminPermissionMixin):
             return error
 
         comments = Comment.objects.select_related("author", "post").order_by("-created_at")
-        serializer = AdminCommentSerializer(comments, many=True)
-        return api_response(data=serializer.data)
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = comments.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_comments = comments[start:end]
+        serializer = AdminCommentSerializer(page_comments, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminCommentDeleteView(APIView, AdminPermissionMixin):
@@ -171,8 +204,19 @@ class AdminAnonymousQuestionsView(APIView, AdminPermissionMixin):
         from apps.plugins.questions.models import AnonymousQuestion
         from apps.plugins.questions.serializers import AdminQuestionSerializer
         questions = AnonymousQuestion.objects.all().order_by("-created_at")
-        serializer = AdminQuestionSerializer(questions, many=True)
-        return api_response(data=serializer.data)
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = questions.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_questions = questions[start:end]
+        serializer = AdminQuestionSerializer(page_questions, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
