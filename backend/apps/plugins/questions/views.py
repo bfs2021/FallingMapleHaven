@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from apps.notifications.models import Notification
 from django.utils.html import strip_tags
+from apps.common.utils import safe_int
 from apps.plugins.utils import ensure_plugin_active
 from .models import AnonymousQuestion
 from .serializers import (
