@@ -30,7 +30,7 @@ class Notification(models.Model):
         blank=True,
         related_name="sent_notifications",
     )
-    type = models.CharField(max_length=50, choices=Type.choices)
+    notification_type = models.CharField(max_length=50, choices=Type.choices)
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True, null=True)
     link = models.CharField(max_length=500, blank=True, null=True)
