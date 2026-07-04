@@ -59,7 +59,7 @@ class PostListView(APIView):
         start = (page - 1) * page_size
         end = start + page_size
         total = posts.count()
-        page_posts = posts[start:end].select_related("author").prefetch_related("images", "comments", "likes")
+        page_posts = posts[start:end].select_related("author", "group").prefetch_related("images", "comments", "likes")
 
         serializer = PostSerializer(
             page_posts, many=True, context={"request": request}
