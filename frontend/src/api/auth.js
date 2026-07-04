@@ -7,10 +7,14 @@ export const authApi = {
   me: () => client.get('/auth/me/'),
   updateMe: (data) => client.patch('/auth/me/', data),
   changePassword: (data) => client.post('/auth/change-password/', data),
-  uploadAvatar: (file) => client.post('/auth/avatar/', { avatar: file }, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  uploadCover: (file) => client.post('/auth/cover/', { cover_image: file }, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  uploadAvatar: (file) => {
+    const fd = new FormData()
+    fd.append('avatar', file)
+    return client.post('/auth/avatar/', fd)
+  },
+  uploadCover: (file) => {
+    const fd = new FormData()
+    fd.append('cover_image', file)
+    return client.post('/auth/cover/', fd)
+  },
 }
