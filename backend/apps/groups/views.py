@@ -1,6 +1,6 @@
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Count, Q, Prefetch
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -28,7 +28,11 @@ class GroupListView(APIView):
     def get(self, request):
         base_qs = InterestGroup.objects.annotate(member_count=Count('members'))
         if request.user.is_authenticated:
-            groups = base_qs.order_by("-created_at")
+            groups = base_qs.annotate(
+                _is_member=Exists(
+                    GroupMember.objects.filter(group=OuterRef('pk'), user=request.user)
+                )
+            ).order_by("-created_at")
         else:
             groups = base_qs.filter(is_public=True).order_by("-created_at")
         serializer = GroupListSerializer(groups, many=True, context={"request": request})
@@ -46,7 +50,7 @@ class GroupCreateView(APIView):
 
         room = ChatRoom.objects.create(
             name=group.name,
-            type=ChatRoom.Type.GROUP,
+            room_type=ChatRoom.Type.GROUP,
             is_group=True,
             group=group,
         )
