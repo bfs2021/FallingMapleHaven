@@ -1,6 +1,6 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -21,7 +21,8 @@ class RoomListView(APIView):
 
     def get(self, request):
         rooms = ChatRoom.objects.filter(members__user=request.user).prefetch_related(
-            "members", "messages"
+            Prefetch("members", queryset=ChatRoomMember.objects.select_related("user")),
+            Prefetch("messages", queryset=Message.objects.order_by("-created_at")),
         ).order_by("-created_at")
         serializer = ChatRoomListSerializer(rooms, many=True, context={"request": request})
         return api_response(data=serializer.data)

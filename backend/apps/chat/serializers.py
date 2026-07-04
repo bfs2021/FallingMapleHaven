@@ -15,36 +15,58 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         model = ChatRoom
         fields = ["id", "name", "type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
 
+    def _cached_last_msg(self, obj):
+        cache = getattr(self, '_msg_cache', {})
+        if obj.id not in cache:
+            cache[obj.id] = obj.messages.order_by("-created_at").first()
+            self._msg_cache = cache
+        return cache[obj.id]
+
+    def _cached_other_member(self, obj, request):
+        cache = getattr(self, '_member_cache', {})
+        if obj.id not in cache:
+            other = None
+            for m in obj.members.all():
+                if m.user_id != request.user.id:
+                    other = m
+                    break
+            cache[obj.id] = other
+            self._member_cache = cache
+        return cache[obj.id]
+
     def get_name(self, obj):
         request = self.context.get("request")
         if obj.type == "private" and request:
-            other = obj.members.exclude(user_id=request.user.id).first()
+            other = self._cached_other_member(obj, request)
             return other.user.nickname if other else "已解散"
         return obj.name
 
     def get_last_message(self, obj):
-        msg = obj.messages.order_by("-created_at").first()
+        msg = self._cached_last_msg(obj)
         return msg.content if msg else None
 
     def get_last_message_at(self, obj):
-        msg = obj.messages.order_by("-created_at").first()
+        msg = self._cached_last_msg(obj)
         return msg.created_at if msg else None
 
     def get_unread_count(self, obj):
         request = self.context.get("request")
         if not request:
             return 0
-        try:
-            member = obj.members.get(user_id=request.user.id)
+        member = None
+        for m in obj.members.all():
+            if m.user_id == request.user.id:
+                member = m
+                break
+        if member:
             last_read = member.last_read_at or member.joined_at
             return obj.messages.filter(created_at__gt=last_read).exclude(sender=request.user).count()
-        except ChatRoomMember.DoesNotExist:
-            return 0
+        return 0
 
     def get_other_user(self, obj):
         request = self.context.get("request")
         if obj.type == "private" and request:
-            other = obj.members.exclude(user_id=request.user.id).first()
+            other = self._cached_other_member(obj, request)
             if other:
                 return {
                     "user_id": other.user.id,
