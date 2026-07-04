@@ -35,6 +35,8 @@ const messages = computed(() => {
 })
 
 onMounted(async () => {
+  chatStore.disconnectWs()
+  chatStore.connectWs()
   const [messagesData] = await Promise.all([
     chatStore.fetchMessages(roomId.value),
     chatStore.fetchRooms(),
