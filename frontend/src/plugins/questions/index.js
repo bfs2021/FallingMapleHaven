@@ -7,5 +7,5 @@ pluginRegistry.register({
   icon: 'message-question',
   route: { path: '/profile/:userId/plugins/question-box', name: 'QuestionBoxPage' },
   adminRoute: { path: 'anonymous-questions', name: 'AdminAnonymousQuestions', component: AdminAnonymousQuestions },
-  adminSidebar: { name: '提问箱管理', icon: '🕵️' },
+  adminSidebar: { name: '提问箱管理', icon: 'helpCircle' },
 })
