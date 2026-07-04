@@ -128,7 +128,7 @@ class UserPostListView(APIView):
         except (User.DoesNotExist, ValueError):
             return user_not_found_response()
 
-        posts = Post.objects.filter(author=user).filter(Q(group_id__isnull=True) | Q(sync_to_profile=True)).select_related("group")
+        posts = Post.objects.filter(author=user).filter(Q(group_id__isnull=True) | Q(sync_to_profile=True)).select_related("author", "group").prefetch_related("images", "comments", "likes")
 
         if request.user.is_authenticated:
             friend_id_set = set()
