@@ -229,9 +229,13 @@ class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
 
         from apps.plugins.quizzes.models import QuizQuestion, QuizAnswer
         questions = QuizQuestion.objects.all().select_related("creator", "target_user")
+        answer_map = {
+            a.question_id: a
+            for a in QuizAnswer.objects.filter(question_id__in=[q.id for q in questions])
+        }
         data = []
         for q in questions:
-            answer = QuizAnswer.objects.filter(question=q).first()
+            answer = answer_map.get(q.id)
             data.append({
                 "id": q.id,
                 "creator": {
