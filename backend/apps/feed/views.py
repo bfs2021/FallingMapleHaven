@@ -150,8 +150,8 @@ class PostCreateView(APIView):
             from apps.groups.models import GroupMember
             from apps.notifications.models import Notification
             members = GroupMember.objects.filter(group_id=post.group_id).exclude(user=request.user).select_related("user")
-            for m in members:
-                Notification.objects.create(
+            Notification.objects.bulk_create([
+                Notification(
                     recipient=m.user,
                     sender=request.user,
                     type="group_new_post",
@@ -159,6 +159,8 @@ class PostCreateView(APIView):
                     content=f"{request.user.nickname} 在 {post.group.name} 发布了新动态",
                     link="",
                 )
+                for m in members
+            ])
 
         return api_response(
             data=PostSerializer(post, context={"request": request}).data,

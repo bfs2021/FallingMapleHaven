@@ -137,8 +137,8 @@ class GroupJoinView(APIView):
             ChatRoomMember.objects.create(room=room, user=request.user)
 
         other_members = GroupMember.objects.filter(group=group).exclude(user=request.user).select_related("user")
-        for m in other_members:
-            Notification.objects.create(
+        Notification.objects.bulk_create([
+            Notification(
                 recipient=m.user,
                 sender=request.user,
                 type="group_member_joined",
@@ -146,6 +146,8 @@ class GroupJoinView(APIView):
                 content=f"欢迎 {request.user.nickname} 加入 {group.name}",
                 link=f"/groups/{group.id}",
             )
+            for m in other_members
+        ])
 
         return api_response(message="加入成功")
 
@@ -382,8 +384,8 @@ class GroupJoinRequestHandleView(APIView):
             )
 
             all_members = GroupMember.objects.filter(group=group).exclude(user=applicant).select_related("user")
-            for m in all_members:
-                Notification.objects.create(
+            Notification.objects.bulk_create([
+                Notification(
                     recipient=m.user,
                     sender=applicant,
                     type="group_member_joined",
@@ -391,6 +393,8 @@ class GroupJoinRequestHandleView(APIView):
                     content=f"欢迎 {applicant.nickname} 加入 {group.name}",
                     link=f"/groups/{group.id}",
                 )
+                for m in all_members
+            ])
         else:
             join_request.status = GroupJoinRequest.Status.REJECTED
 
