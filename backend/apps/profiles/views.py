@@ -71,7 +71,11 @@ class ProfileView(APIView):
         if request.user.is_authenticated:
             friend_status = get_friend_status(request.user, user)
             if request.user != user:
-                VisitRecord.objects.create(visitor=request.user, visited_user=user)
+                VisitRecord.objects.update_or_create(
+                    visitor=request.user,
+                    visited_user=user,
+                    defaults={"visited_at": timezone.now()},
+                )
         else:
             friend_status = "none"
 
