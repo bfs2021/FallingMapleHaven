@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.notifications.models import Notification
-from apps.common.utils import api_response, safe_int
+from django.utils.html import strip_tags
 from apps.plugins.utils import ensure_plugin_active
 from .models import AnonymousQuestion
 from .serializers import (
@@ -37,7 +37,7 @@ class QuestionCreateView(APIView):
             sender=request.user,
             type=Notification.Type.ANONYMOUS_QUESTION,
             title="收到匿名提问",
-            content=serializer.validated_data["content"][:100],
+            content=strip_tags(serializer.validated_data["content"])[:100],
             link=f"/profile/{serializer.validated_data['recipient_id']}/plugins/question-box",
         )
         return Response(
