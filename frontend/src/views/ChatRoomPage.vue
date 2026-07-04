@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 import MessageBubble from '@/components/MessageBubble.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
 
@@ -10,6 +11,9 @@ const route = useRoute()
 const router = useRouter()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const toast = useToast()
+
+const MAX_MESSAGE_LENGTH = 2000
 
 const roomId = computed(() => Number(route.params.roomId))
 const messageInput = ref('')
@@ -80,6 +84,10 @@ async function loadMore() {
 async function sendMessage() {
   const text = messageInput.value.trim()
   if (!text) return
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    toast.info(`消息不能超过 ${MAX_MESSAGE_LENGTH} 字符`)
+    return
+  }
   sending.value = true
   messageInput.value = ''
   try {
