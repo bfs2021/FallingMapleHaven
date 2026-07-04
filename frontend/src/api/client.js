@@ -53,7 +53,7 @@ client.interceptors.response.use(
     if (error.response?.status === 401) {
       const { useAuthStore } = await import('@/stores/auth')
       const authStore = useAuthStore()
-      authStore.user = null
+      authStore.logout().catch(() => {})
     }
     return Promise.reject(error)
   }
