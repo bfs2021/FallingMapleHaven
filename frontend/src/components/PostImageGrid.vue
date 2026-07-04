@@ -17,8 +17,8 @@ defineProps({
     <div class="overflow-hidden rounded-lg row-span-2 group/image">
       <img :src="images[0]" class="w-full h-64 object-cover transition-transform duration-300 ease-out group-hover/image:scale-105" />
     </div>
-    <div v-for="(img, i) in [1,2]" :key="i" class="overflow-hidden rounded-lg group/image">
-      <img :src="images[i]" class="w-full h-[7.5rem] object-cover transition-transform duration-300 ease-out group-hover/image:scale-105" />
+    <div v-for="(img, i) in images.slice(1)" :key="i" class="overflow-hidden rounded-lg group/image">
+      <img :src="img" class="w-full h-[7.5rem] object-cover transition-transform duration-300 ease-out group-hover/image:scale-105" />
     </div>
   </div>
   <div v-else-if="images.length === 4" class="grid grid-cols-2 gap-2">
