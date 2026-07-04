@@ -13,6 +13,8 @@ User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.room_groups = []
+
         origin = None
         for key, value in self.scope.get("headers", []):
             if key == b"origin":
@@ -38,7 +40,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        self.room_groups = []
         room_ids = await self.get_user_room_ids()
         for room_id in room_ids:
             group_name = f"chat_{room_id}"
