@@ -178,6 +178,9 @@ class AvatarUploadView(APIView):
             img = Image.open(file)
             img.verify()
             file.seek(0)
+            img = Image.open(file)
+            img.load()
+            file.seek(0)
         except Exception:
             return api_response(
                 code=40001,
@@ -219,6 +222,9 @@ class CoverUploadView(APIView):
         try:
             img = Image.open(file)
             img.verify()
+            file.seek(0)
+            img = Image.open(file)
+            img.load()
             file.seek(0)
         except Exception:
             return api_response(
