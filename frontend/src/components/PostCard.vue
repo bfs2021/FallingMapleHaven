@@ -30,6 +30,7 @@ const showFullText = ref(false)
 const showComments = ref(false)
 const comments = ref([])
 const commentsLoaded = ref(false)
+const commentCount = ref(props.post.comment_count || 0)
 const needsTruncation = props.post.content?.length > 150
 
 function toggleComments() {
@@ -57,8 +58,8 @@ async function deletePost() {
 
 function onCommentDeleted(commentId) {
   comments.value = comments.value.filter(comment => comment.id !== commentId)
-  if (props.post.comment_count > 0) {
-    props.post.comment_count -= 1
+  if (commentCount.value > 0) {
+    commentCount.value -= 1
   }
 }
 
@@ -145,7 +146,7 @@ function goToProfile() {
           :postId="post.id"
           :isLiked="post.is_liked"
           :likeCount="post.like_count"
-          :commentCount="post.comment_count"
+          :commentCount="commentCount"
           @toggle-comments="toggleComments"
           @like-updated="(d) => emit('like-updated', { postId: post.id, ...d })"
         />
