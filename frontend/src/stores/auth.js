@@ -37,15 +37,11 @@ export const useAuthStore = defineStore('auth', {
     async ensureSession() {
       if (this.initialized) return
       if (!sessionInitPromise) {
-        sessionInitPromise = this.fetchMe()
+        sessionInitPromise = this.fetchMe().finally(() => {
+          sessionInitPromise = null
+        })
       }
-      try {
-        await sessionInitPromise
-      } catch {
-        // fetchMe already handles errors internally
-      } finally {
-        sessionInitPromise = null
-      }
+      await sessionInitPromise
     },
     async logout() {
       await authApi.logout()
