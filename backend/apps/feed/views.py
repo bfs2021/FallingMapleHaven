@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.feed.models import Comment, Like, Post, PostFile, PostImage
 from apps.friends.models import Friendship
+from apps.groups.models import GroupMember
 from apps.feed.serializers import (
     CommentCreateSerializer,
     CommentSerializer,
@@ -202,6 +203,15 @@ class PostDetailView(APIView):
                 status=Friendship.Status.ACCEPTED,
             ).exists()
             if not is_friend:
+                return api_response(
+                    code=40003,
+                    message="无权查看该动态",
+                    data=None,
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        if post.group and not post.group.is_public:
+            if not request.user.is_authenticated or not GroupMember.objects.filter(group=post.group, user=request.user).exists():
                 return api_response(
                     code=40003,
                     message="无权查看该动态",
