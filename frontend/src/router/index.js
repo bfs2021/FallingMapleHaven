@@ -111,7 +111,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  if ((to.meta.requiresAuth || to.meta.requiresAdmin || to.meta.guest) && !authStore.initialized) {
+  if (!authStore.initialized) {
     await authStore.ensureSession()
   }
 
