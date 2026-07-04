@@ -76,7 +76,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         return None
 
     def get_member_count(self, obj):
-        if obj.type == "group" and obj.group:
+        if obj.room_type == "group" and obj.group:
             return obj.group.members.count()
         return None
 
