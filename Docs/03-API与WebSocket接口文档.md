@@ -245,12 +245,12 @@ GET /api/v1/profiles/{username_or_id}/
 ### 3.2 管理员查看/编辑用户主页
 
 ```
-GET/PATCH /api/v1/profiles/{username_or_id}/admin/
+GET/PATCH /api/v1/profiles/{user_id}/admin/
 ```
 
-> 仅管理员可访问。GET 返回用户 Profile 完整信息，PATCH 更新配置字段。
+> 仅管理员可访问。路径参数为整数用户 ID（不支持用户名）。GET 返回用户 Profile 完整信息，PATCH 更新配置字段。
 
-### 3.2 获取用户的动态列表
+### 3.3 获取用户的动态列表
 
 ```
 GET /api/v1/profiles/{user_id}/posts/
@@ -710,6 +710,26 @@ GET /api/v1/groups/{group_id}/posts/
 
 ### 9.1 默契问答
 
+**好友排行榜:**
+```
+GET /api/v1/plugins/quiz/leaderboard/
+```
+返回当前用户与所有好友的匹配度排名，按匹配度降序、答题数降序排列。
+
+```json
+{
+    "code": 0,
+    "data": {
+        "rankings": [
+            { "rank": 1, "friend_id": 2, "nickname": "李四", "avatar_url": null, "match_score": 92.0, "total_questions": 13, "correct_count": 11 },
+            { "rank": 2, "friend_id": 3, "nickname": "王五", "avatar_url": null, "match_score": 85.0, "total_questions": 8, "correct_count": 6 }
+        ],
+        "avg_match_rate": 75.0,
+        "total_friends": 6
+    }
+}
+```
+
 **给好友出题:**
 ```
 POST /api/v1/plugins/quiz/questions/
@@ -740,6 +760,11 @@ POST /api/v1/plugins/quiz/questions/{question_id}/answer/
 **获取我与某好友的匹配度:**
 ```
 GET /api/v1/plugins/quiz/result/{friend_user_id}/
+```
+
+**删除题目:**
+```
+DELETE /api/v1/plugins/quiz/questions/{question_id}/delete/
 ```
 
 ### 9.1.1 收到的题目支持筛选
@@ -780,6 +805,85 @@ POST /api/v1/plugins/question-box/{question_id}/answer/
 **删除提问:**
 ```
 DELETE /api/v1/plugins/question-box/{question_id}/delete/
+```
+
+### 9.3 插件摘要
+
+返回所有已注册插件的全局摘要，用于 `/plugins` 独立页面展示。
+
+```
+GET /api/v1/plugins/summary/
+```
+
+```json
+{
+    "code": 0,
+    "data": [
+        {
+            "type": "quiz",
+            "name": "默契问答",
+            "icon": "help-circle",
+            "description": "和朋友互相出题测试默契度",
+            "data": {
+                "avg_match_rate": 75.5,
+                "best_friend_id": 2,
+                "best_friend_name": "李四",
+                "best_match_rate": 92.0,
+                "total_friends_answered": 6
+            },
+            "is_active": true,
+            "route": "/plugins"
+        },
+        {
+            "type": "question_box",
+            "name": "匿名提问箱",
+            "icon": "message-question",
+            "description": "任何人都可以匿名向你提问",
+            "data": {
+                "total_questions": 15,
+                "unanswered_count": 3
+            },
+            "is_active": true,
+            "route": "/plugins"
+        }
+    ]
+}
+```
+
+### 9.4 个人主页插件卡片
+
+返回某用户主页的插件卡片数据（含访客视角动态数据，如 A 看 B 主页时显示 A 与 B 的匹配度）。
+
+```
+GET /api/v1/plugins/profile-cards/{user_id}/
+```
+
+```json
+{
+    "code": 0,
+    "data": [
+        {
+            "type": "quiz",
+            "name": "默契问答",
+            "icon": "help-circle",
+            "description": "和朋友互相出题测试默契度",
+            "data": {
+                "match_score": 87.0,
+                "total_questions": 13,
+                "correct_count": 11
+            },
+            "route": "/profile/123/plugins/quiz"
+        },
+        {
+            "type": "guestbook",
+            "name": "留言板",
+            "icon": "message-square",
+            "description": "给我留言",
+            "data": { "total_messages": 12 },
+            "route": "/profile/123/guestbook"
+        }
+    ]
+}
 ```
 
 ---
@@ -833,9 +937,11 @@ DELETE /api/v1/admin/posts/{post_id}/          # 删除动态
 GET /api/v1/admin/comments/                   # 评论列表
 DELETE /api/v1/admin/comments/{comment_id}/    # 删除评论
 GET /api/v1/admin/anonymous-questions/         # 匿名提问追溯
+GET /api/v1/admin/quiz/questions/              # 问答管理（所有题目+作答状态）
 ```
 
 > 匿名提问追溯接口返回数据包含 `real_sender` 字段，前端入口为 `/admin/anonymous-questions`。
+> 问答管理接口返回数据包含题目、出题人、目标人、已答状态、是否正确等信息，前端入口为 `/admin/quiz`。
 
 ### 11.3 站点设置
 

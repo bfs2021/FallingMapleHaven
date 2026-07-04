@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { friendApi } from '@/api/friends'
-import { quizApi } from '@/api/plugin'
+import { quizApi, pluginApi } from '@/api/plugin'
 import TabBar from '@/components/TabBar.vue'
 import Icon from '@/components/Icon.vue'
 import SelectField from '@/components/SelectField.vue'
@@ -27,9 +27,13 @@ const matchFriendId = ref(null)
 const matchResult = ref(null)
 const loadingMatch = ref(false)
 
+const leaderboard = ref({ rankings: [], avg_match_rate: 0, total_friends: 0 })
+const loadingLeaderboard = ref(false)
+
 onMounted(() => {
   fetchFriends()
   fetchReceived()
+  fetchLeaderboard()
 })
 
 async function fetchFriends() {
@@ -91,14 +95,29 @@ async function fetchResult() {
     loadingMatch.value = false
   }
 }
+
+async function fetchLeaderboard() {
+  loadingLeaderboard.value = true
+  try {
+    const res = await pluginApi.getQuizLeaderboard()
+    leaderboard.value = res.data || { rankings: [], avg_match_rate: 0, total_friends: 0 }
+  } catch { /* ignore */ } finally {
+    loadingLeaderboard.value = false
+  }
+}
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-maple-700 mb-6">默契问答</h1>
+    <h1 class="page-title">默契问答</h1>
 
     <TabBar
-      :tabs="[{ key: 'create', label: '出题' }, { key: 'answer', label: '答题' }, { key: 'match', label: '匹配度' }]"
+      :tabs="[
+        { key: 'create', label: '出题' },
+        { key: 'answer', label: '答题' },
+        { key: 'leaderboard', label: '好友排行' },
+        { key: 'match', label: '匹配度' },
+      ]"
       :activeKey="activeTab"
       @update:activeKey="activeTab = $event"
       class="mb-6"
@@ -144,8 +163,20 @@ async function fetchResult() {
     </div>
 
     <div v-if="activeTab === 'answer'" class="space-y-4">
-      <div v-if="loadingReceived" class="text-center text-text-secondary py-8">加载中...</div>
-      <div v-else-if="!receivedQuestions.length" class="text-center text-text-secondary py-8">暂未收到题目</div>
+      <div v-if="loadingReceived" class="space-y-4">
+        <div v-for="i in 2" :key="i" class="card-base p-4 space-y-3">
+          <div class="h-3 w-24 skeleton" />
+          <div class="h-4 w-3/4 skeleton" />
+          <div class="flex gap-2">
+            <div class="flex-1 h-10 skeleton" />
+            <div class="w-16 h-10 skeleton" />
+          </div>
+        </div>
+      </div>
+      <div v-else-if="!receivedQuestions.length" class="text-center py-12 text-text-secondary">
+        <Icon name="helpCircle" :size="40" class="mx-auto mb-2 text-maple-300" />
+        <p>暂未收到题目</p>
+      </div>
       <div
         v-for="q in receivedQuestions"
         :key="q.id"
@@ -175,6 +206,53 @@ async function fetchResult() {
       </div>
     </div>
 
+    <div v-if="activeTab === 'leaderboard'" class="space-y-4">
+      <div v-if="loadingLeaderboard" class="space-y-3">
+        <div v-for="i in 4" :key="i" class="card-base px-4 py-3 flex items-center gap-3">
+          <div class="w-7 h-5 skeleton" />
+          <div class="w-8 h-8 rounded-full skeleton" />
+          <div class="flex-1 h-4 skeleton" />
+          <div class="w-16 h-4 skeleton" />
+        </div>
+      </div>
+      <div v-else-if="!leaderboard.rankings?.length" class="text-center py-12">
+        <Icon name="trophy" :size="48" class="mx-auto mb-3 text-maple-300" />
+        <p class="text-text-secondary mb-4">还没有答题记录</p>
+        <button @click="activeTab = 'create'" class="btn-primary px-5 py-2.5">去出题</button>
+      </div>
+      <template v-else>
+        <div class="card-base divide-y divide-border overflow-hidden">
+          <div
+            v-for="item in leaderboard.rankings"
+            :key="item.friend_id"
+            class="flex items-center gap-3 px-4 py-3 hover:bg-maple-50/40 transition-colors"
+          >
+            <div class="w-7 text-center">
+              <span v-if="item.rank === 1" class="text-lg">🥇</span>
+              <span v-else-if="item.rank === 2" class="text-lg">🥈</span>
+              <span v-else-if="item.rank === 3" class="text-lg">🥉</span>
+              <span v-else class="text-sm font-medium text-text-secondary">{{ item.rank }}</span>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-maple-100 overflow-hidden flex items-center justify-center text-xs font-bold flex-shrink-0">
+              <img v-if="item.avatar_url" :src="item.avatar_url" class="w-full h-full object-cover" />
+              <span v-else class="text-maple-600">{{ item.nickname?.[0]?.toUpperCase() || '?' }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-medium text-text-primary truncate">{{ item.nickname }}</span>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-bold text-maple-600">{{ item.match_score }}%</div>
+              <div class="text-tag text-text-secondary">共 {{ item.total_questions }} 题</div>
+            </div>
+          </div>
+        </div>
+        <div class="text-center text-sm text-text-secondary py-3 card-base">
+          平均匹配度：<span class="font-medium text-maple-600">{{ leaderboard.avg_match_rate }}%</span>
+          ｜已与 <span class="font-medium">{{ leaderboard.total_friends }}</span> 位好友答题
+        </div>
+      </template>
+    </div>
+
     <div v-if="activeTab === 'match'" class="space-y-4 max-w-lg">
       <div>
         <label class="block text-sm font-medium text-text-primary mb-1">选择好友查看匹配度</label>
@@ -185,8 +263,10 @@ async function fetchResult() {
           @update:model-value="fetchResult"
         />
       </div>
-      <div v-if="loadingMatch" class="text-center text-text-secondary py-4">加载中...</div>
-      <div v-else-if="matchResult" class="bg-white rounded-xl border border-border p-6 text-center space-y-3">
+      <div v-if="loadingMatch" class="card-base p-6 flex items-center justify-center">
+        <div class="h-4 w-32 skeleton" />
+      </div>
+      <div v-else-if="matchResult" class="card-base p-6 text-center space-y-3">
         <div class="text-4xl font-bold text-maple-600">{{ matchResult.match_score || 0 }}%</div>
         <div class="text-sm text-text-secondary">匹配度</div>
         <div class="flex justify-center gap-6 text-sm text-text-secondary">

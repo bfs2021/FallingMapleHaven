@@ -191,3 +191,51 @@ class QuizResultView(APIView):
             )
         serializer = QuizResultSerializer(result, context={"user_id": request.user.id})
         return Response({"code": 0, "message": "success", "data": serializer.data})
+
+
+class QuizLeaderboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
+
+        from apps.friends.models import Friendship
+        from django.db.models import Q
+
+        friends = Friendship.objects.filter(
+            Q(sender=request.user, status="accepted") |
+            Q(receiver=request.user, status="accepted")
+        )
+        friend_ids = set()
+        for f in friends:
+            friend_ids.add(f.sender_id if f.receiver == request.user else f.receiver_id)
+
+        results = QuizResult.objects.filter(
+            (Q(user_a=request.user) & Q(user_b_id__in=friend_ids)) |
+            (Q(user_b=request.user) & Q(user_a_id__in=friend_ids))
+        ).order_by("-match_score", "-total_questions")
+
+        rankings = []
+        for i, r in enumerate(results, 1):
+            friend = r.user_a if r.user_b == request.user else r.user_b
+            rankings.append({
+                "rank": i,
+                "friend_id": friend.id,
+                "nickname": friend.nickname,
+                "avatar_url": friend.avatar.url if friend.avatar else None,
+                "match_score": float(r.match_score),
+                "total_questions": r.total_questions,
+                "correct_count": r.correct_count,
+            })
+
+        avg = round(
+            sum(r["match_score"] for r in rankings) / len(rankings), 1
+        ) if rankings else 0
+
+        return Response({"code": 0, "data": {
+            "rankings": rankings,
+            "avg_match_rate": avg,
+            "total_friends": len(rankings),
+        }})

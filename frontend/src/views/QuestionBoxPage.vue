@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { questionBoxApi } from '@/api/plugin'
 import { useAuthStore } from '@/stores/auth'
 import TabBar from '@/components/TabBar.vue'
+import Icon from '@/components/Icon.vue'
 
 const authStore = useAuthStore()
 const activeTab = ref('inbox')
@@ -57,7 +58,7 @@ const unansweredQuestions = computed(() =>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-maple-700 mb-6">匿名提问箱</h1>
+    <h1 class="page-title">匿名提问箱</h1>
 
     <TabBar
       :tabs="[{ key: 'inbox', label: `待回答 (${unansweredQuestions.length})` }, { key: 'answers', label: `已回答 (${answeredQuestions.length})` }]"
@@ -67,9 +68,20 @@ const unansweredQuestions = computed(() =>
     />
 
     <div v-if="activeTab === 'inbox'" class="space-y-4">
-      <div v-if="loading" class="text-center text-text-secondary py-8">加载中...</div>
+      <div v-if="loading" class="space-y-4">
+        <div v-for="i in 2" :key="i" class="card-base p-4 space-y-3">
+          <div class="flex items-start justify-between">
+            <div class="h-4 w-3/4 skeleton" />
+            <div class="h-4 w-8 skeleton" />
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1 h-10 skeleton" />
+            <div class="w-16 h-10 skeleton" />
+          </div>
+        </div>
+      </div>
       <template v-else-if="unansweredQuestions.length">
-        <div v-for="q in unansweredQuestions" :key="q.id" class="bg-white rounded-xl border border-border p-4 space-y-3">
+        <div v-for="q in unansweredQuestions" :key="q.id" class="card-base p-4 space-y-3">
           <div class="flex items-start justify-between">
             <div>
               <p class="text-sm text-text-primary">{{ q.content }}</p>
@@ -80,7 +92,7 @@ const unansweredQuestions = computed(() =>
             </div>
             <button
               @click="deleteQuestion(q)"
-              class="text-xs text-red-400 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0 ml-2"
+              class="text-xs text-red-400 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0 ml-2 py-2 active:scale-[0.97]"
             >
               删除
             </button>
@@ -90,28 +102,34 @@ const unansweredQuestions = computed(() =>
               v-model="answerText[q.id]"
               type="text"
               placeholder="输入回答..."
-              class="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600"
+              class="input-base flex-1"
               @keyup.enter="submitAnswer(q)"
             />
             <button
               @click="submitAnswer(q)"
               :disabled="submittingAnswer || !answerText[q.id]?.trim()"
-              class="px-4 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer"
+              class="btn-primary px-4"
             >
               回答
             </button>
           </div>
         </div>
       </template>
-      <div v-else class="text-center text-text-secondary py-8">没有待回答的提问</div>
+      <div v-else class="text-center py-12 text-text-secondary">
+        <Icon name="helpCircle" :size="40" class="mx-auto mb-2 text-maple-300" />
+        <p>没有待回答的提问</p>
+      </div>
     </div>
 
     <div v-if="activeTab === 'answers'" class="space-y-4">
-      <div v-if="!answeredQuestions.length" class="text-center text-text-secondary py-8">暂无已公开的回答</div>
+      <div v-if="!answeredQuestions.length" class="text-center py-12 text-text-secondary">
+        <Icon name="messageSquare" :size="40" class="mx-auto mb-2 text-maple-300" />
+        <p>暂无已公开的回答</p>
+      </div>
       <div
         v-for="q in answeredQuestions"
         :key="q.id"
-        class="bg-white rounded-xl border border-border p-4 space-y-2"
+        class="card-base p-4 space-y-2"
       >
         <p class="text-sm text-text-primary">Q: {{ q.content }}</p>
         <div v-if="authStore.isAdmin && q.real_sender" class="text-xs text-red-500">

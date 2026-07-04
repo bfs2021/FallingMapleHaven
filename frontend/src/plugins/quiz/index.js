@@ -1,9 +1,11 @@
 import { pluginRegistry } from '../registry'
+import AdminQuizPage from '@/views/admin/AdminQuizPage.vue'
 
 pluginRegistry.register({
   type: 'quiz',
   name: '默契问答',
   icon: 'help-circle',
   route: { path: '/profile/:userId/plugins/quiz', name: 'QuizPage' },
-  // adminRoute and adminSidebar would go here when the admin page is implemented
+  adminRoute: { path: 'quiz', name: 'AdminQuiz', component: AdminQuizPage },
+  adminSidebar: { name: '问答管理', icon: 'puzzle' },
 })

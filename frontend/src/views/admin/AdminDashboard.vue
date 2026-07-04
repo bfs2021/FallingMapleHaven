@@ -18,7 +18,10 @@ const builtinNavItems = [
 ]
 
 const pluginNavItems = pluginRegistry.getAdminSidebarItems()
-const navItems = [...builtinNavItems, ...pluginNavItems]
+const navItems = [
+  ...builtinNavItems.map(item => ({ ...item, isPlugin: false })),
+  ...pluginNavItems.map(item => ({ ...item, isPlugin: true })),
+]
 
 function isActive(path, exact = false) {
   if (exact) return route.path === path
@@ -69,6 +72,7 @@ function isActive(path, exact = false) {
             :class="isActive(item.path, item.exact) ? '' : 'group-hover:scale-110'"
           />
           <span>{{ item.name }}</span>
+          <span v-if="item.isPlugin" class="text-[10px] px-1.5 py-0.5 rounded bg-maple-100 text-maple-600 ml-auto">插件</span>
         </RouterLink>
       </aside>
 
@@ -92,6 +96,7 @@ function isActive(path, exact = false) {
             >
               <Icon :name="item.icon" :size="18" />
               <span>{{ item.name }}</span>
+              <span v-if="item.isPlugin" class="text-[10px] px-1.5 py-0.5 rounded bg-maple-100 text-maple-600 ml-auto">插件</span>
             </RouterLink>
           </div>
         </div>

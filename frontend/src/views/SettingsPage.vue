@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api/auth'
 import AvatarImage from '@/components/AvatarImage.vue'
@@ -221,6 +222,23 @@ async function changePassword() {
       </div>
       <p v-if="profileError" class="text-sm text-red-500">{{ profileError }}</p>
     </div>
+
+    <!-- 主页模块 -->
+    <RouterLink
+      to="/settings/modules"
+      class="bg-white rounded-2xl shadow-sm border border-border p-6 flex items-center justify-between group hover:border-maple-300 transition-colors"
+    >
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-maple-50 flex items-center justify-center">
+          <Icon name="layout" :size="20" class="text-maple-600" />
+        </div>
+        <div>
+          <div class="text-sm font-medium text-text-primary">主页模块管理</div>
+          <div class="text-xs text-text-secondary mt-0.5">控制主页上显示哪些模块</div>
+        </div>
+      </div>
+      <Icon name="chevronRight" :size="18" class="text-text-secondary group-hover:text-maple-600 transition-colors" />
+    </RouterLink>
 
     <!-- 修改密码 -->
     <div class="bg-white rounded-2xl shadow-sm border border-border p-6 space-y-5">

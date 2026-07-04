@@ -173,6 +173,37 @@ class AdminAnonymousQuestionsView(APIView, AdminPermissionMixin):
         return api_response(data=serializer.data)
 
 
+class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.quizzes.models import QuizQuestion, QuizAnswer
+        questions = QuizQuestion.objects.all().select_related("creator", "target_user")
+        data = []
+        for q in questions:
+            answer = QuizAnswer.objects.filter(question=q).first()
+            data.append({
+                "id": q.id,
+                "creator": {
+                    "user_id": q.creator.id,
+                    "nickname": q.creator.nickname,
+                },
+                "target_user": {
+                    "user_id": q.target_user.id,
+                    "nickname": q.target_user.nickname,
+                },
+                "question": q.question,
+                "has_answer": answer is not None,
+                "is_correct": answer.is_correct if answer else None,
+                "created_at": q.created_at,
+            })
+        return api_response(data=data)
+
+
 class AdminPluginListView(APIView, AdminPermissionMixin):
     permission_classes = [IsAuthenticated]
 

@@ -11,6 +11,7 @@ const tabs = computed(() => {
   const items = [
     { name: '首页', path: '/', icon: 'home' },
     { name: '群组', path: '/groups', icon: 'users' },
+    { name: '插件', path: '/plugins', icon: 'puzzle' },
     { name: '聊天', path: '/chat', icon: 'messageCircle' },
     { name: '好友', path: '/friends', icon: 'userPlus' },
     { name: '通知', path: '/notifications', icon: 'bell' },

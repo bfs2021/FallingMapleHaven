@@ -8,6 +8,7 @@ export const adminApi = {
   comments: () => client.get('/admin/comments/'),
   deleteComment: (id) => client.delete(`/admin/comments/${id}/`),
   anonymousQuestions: () => client.get('/admin/anonymous-questions/'),
+  quizQuestions: () => client.get('/admin/quiz/questions/'),
   plugins: () => client.get('/admin/plugins/'),
   updatePlugin: (id, data) => client.patch(`/admin/plugins/${id}/`, data),
   settings: () => client.get('/admin/settings/'),

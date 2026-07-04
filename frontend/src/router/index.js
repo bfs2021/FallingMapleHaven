@@ -49,6 +49,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/plugins',
+    name: 'Plugins',
+    component: () => import('@/views/PluginsPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/chat',
     name: 'ChatList',
     component: () => import('@/views/ChatListPage.vue'),
@@ -75,6 +81,12 @@ const routes = [
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/SettingsPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/modules',
+    name: 'SettingsModules',
+    component: () => import('@/views/SettingsModulesPage.vue'),
     meta: { requiresAuth: true },
   },
   {

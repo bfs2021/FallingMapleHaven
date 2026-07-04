@@ -3,12 +3,12 @@ import { ref, onMounted, computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { profileApi } from '@/api/profiles'
+import { pluginApi } from '@/api/plugin'
 import { useConfirm } from '@/composables/useConfirm'
 import { relativeTime } from '@/utils/time'
 import PostCard from '@/components/PostCard.vue'
 import FriendButton from '@/components/FriendButton.vue'
 import PluginEntryGrid from '@/components/PluginEntryGrid.vue'
-import GuestbookBoard from '@/components/GuestbookBoard.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
 import Icon from '@/components/Icon.vue'
 import TabBar from '@/components/TabBar.vue'
@@ -24,7 +24,6 @@ const loading = ref(true)
 const activeTab = ref('posts')
 const posts = ref([])
 const visitors = ref([])
-const guestbookEntries = ref([])
 const postsLoading = ref(false)
 
 const userId = computed(() => {
@@ -35,30 +34,31 @@ const userId = computed(() => {
 const isGuest = computed(() => !authStore.isAuthenticated)
 const isOwner = computed(() => authStore.user?.user_id === userId.value)
 
+const layoutConfig = computed(() => {
+  if (!authStore.isAuthenticated) {
+    return { show_plugin_area: true, show_visitors: true }
+  }
+  return {
+    show_plugin_area: true,
+    show_visitors: true,
+    ...(authStore.user?.layout_config || {}),
+  }
+})
+
 const tabs = computed(() => {
   const items = [
     { key: 'posts', label: '动态' },
-    { key: 'guestbook', label: '留言板' },
   ]
-  if (!isGuest.value) {
-    items.splice(1, 0, { key: 'visitors', label: '访客' })
+  if (!isGuest.value && layoutConfig.value.show_visitors) {
+    items.push({ key: 'visitors', label: '访客' })
   }
   return items
 })
 
-const pluginCards = computed(() => {
-  const cards = (profile.value?.plugins || []).map(p => ({
-    name: p.name, icon: p.icon || 'helpCircle', desc: p.description, route: p.route,
-  }))
-  cards.push({
-    name: '留言板', icon: 'messageSquare', desc: '给我留言',
-    route: `/profile/${userId.value}/guestbook`,
-  })
-  return cards
-})
+const pluginCards = ref([])
 
 onMounted(async () => {
-  await Promise.all([fetchProfile(), fetchPosts()])
+  await Promise.all([fetchProfile(), fetchPosts(), fetchPluginCards()])
 })
 
 async function fetchProfile() {
@@ -89,18 +89,33 @@ async function fetchVisitors() {
   } catch { /* ignore */ }
 }
 
-async function fetchGuestbook() {
-  if (guestbookEntries.value.length) return
+async function fetchPluginCards() {
   try {
-    const res = await profileApi.guestbook(userId.value, { page: 1, page_size: 20 })
-    guestbookEntries.value = res.data?.results || []
-  } catch { /* ignore */ }
+    const res = await pluginApi.getProfileCards(userId.value)
+    pluginCards.value = res.data || []
+  } catch {
+    const cards = (profile.value?.plugins || []).map(p => ({
+      type: p.type,
+      name: p.name,
+      icon: p.icon || 'helpCircle',
+      desc: p.description,
+      data: p.data,
+      route: p.route,
+    }))
+    cards.push({
+      type: 'guestbook',
+      name: '留言板',
+      icon: 'messageSquare',
+      desc: '给我留言',
+      data: { total_messages: 0 },
+      route: `/profile/${userId.value}/guestbook`,
+    })
+    pluginCards.value = cards
+  }
 }
 
 function onTabChange(tab) {
   activeTab.value = tab
-  if (tab === 'visitors') fetchVisitors()
-  if (tab === 'guestbook') fetchGuestbook()
 }
 
 function goToPlugin(plugin) {
@@ -231,7 +246,7 @@ async function handleLogout() {
       </div>
     </div>
 
-    <div class="px-4 mt-6">
+    <div v-if="layoutConfig.show_plugin_area" class="px-4 mt-6">
       <PluginEntryGrid :plugins="pluginCards" @navigate="goToPlugin" />
     </div>
 
@@ -281,15 +296,6 @@ async function handleLogout() {
         </div>
       </div>
 
-      <div v-if="activeTab === 'guestbook'" class="mt-4 animate-fade-in">
-        <GuestbookBoard
-          :userId="userId"
-          :entries="guestbookEntries"
-          :isOwner="isOwner"
-          :isGuest="isGuest"
-          @update:entries="guestbookEntries = $event"
-        />
-      </div>
     </div>
   </div>
 

@@ -1,5 +1,11 @@
 import client from './client'
 
+export const pluginApi = {
+  getSummary: () => client.get('/plugins/summary/'),
+  getProfileCards: (userId) => client.get(`/plugins/profile-cards/${userId}/`),
+  getQuizLeaderboard: () => client.get('/plugins/quiz/leaderboard/'),
+}
+
 export const quizApi = {
   create: (data) => client.post('/plugins/quiz/questions/', data),
   received: () => client.get('/plugins/quiz/questions/received/'),
