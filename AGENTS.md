@@ -6,7 +6,7 @@ cd frontend && npm run build
 ```
 
 ## Key Conventions
-- Branch: UIUX (based on master)
+
 - Vue 3 Composition API + Tailwind CSS 3 + lucide-vue-next icons
 - Maple color system: maple-50 (~#FFF8F0) through maple-900
 - Use `@/` path alias for src/
