@@ -55,10 +55,10 @@ class PostSerializer(serializers.ModelSerializer):
         return [img.image.url for img in obj.images.all()]
 
     def get_comment_count(self, obj):
-        return obj.comments.count()
+        return len(obj.comments.all())
 
     def get_like_count(self, obj):
-        return obj.likes.count()
+        return len(obj.likes.all())
 
     def get_is_liked(self, obj):
         request = self.context.get("request")
