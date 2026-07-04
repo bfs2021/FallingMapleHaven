@@ -17,7 +17,7 @@ from apps.feed.serializers import (
     PostSerializer,
 )
 
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 ALLOWED_FILE_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".txt", ".md", ".csv", ".xlsx", ".pptx"}
@@ -54,7 +54,7 @@ class PostListView(APIView):
 
         posts = posts.order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size

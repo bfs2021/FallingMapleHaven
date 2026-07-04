@@ -15,7 +15,7 @@ from apps.admin_dashboard.serializers import (
     AdminSiteSettingsUpdateSerializer,
     AdminUserSerializer,
 )
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.chat.models import ChatRoom, Message
 from apps.feed.models import Comment, Post
 from apps.groups.models import InterestGroup, GroupMember
@@ -356,7 +356,7 @@ class AdminLogsView(APIView, AdminPermissionMixin):
 
         logs = logs.order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 50
         total = logs.count()
         start = (page - 1) * page_size
@@ -397,7 +397,7 @@ class AdminTrendsView(APIView, AdminPermissionMixin):
         from apps.feed.models import Post
         from apps.accounts.models import User
 
-        days = int(request.query_params.get("days", 7))
+        days = safe_int(request.query_params.get("days"), 7)
         since = timezone.now() - timezone.timedelta(days=days)
 
         user_trends = (
@@ -538,7 +538,7 @@ class AdminGroupPostsView(APIView, AdminPermissionMixin):
 
         posts = Post.objects.filter(group_id=pk).select_related('author').order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         total = posts.count()
         start = (page - 1) * page_size

@@ -13,7 +13,7 @@ from apps.chat.serializers import (
     MessageSerializer,
     RoomCreateSerializer,
 )
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 
 
 class RoomListView(APIView):
@@ -45,7 +45,7 @@ class RoomMessagesView(APIView):
             )
 
         messages = room.messages.all()
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 50
         start = (page - 1) * page_size
         end = start + page_size

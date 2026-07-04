@@ -9,7 +9,7 @@ from apps.accounts.models import User
 from apps.feed.models import Post
 from apps.friends.models import Friendship
 from apps.profiles.models import GuestbookEntry, UserProfile, VisitRecord
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.profiles.serializers import (
     GuestbookCreateSerializer,
     GuestbookEntrySerializer,
@@ -101,7 +101,7 @@ class VisitorListView(APIView):
 
         visitors = VisitRecord.objects.filter(visited_user=user)
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
@@ -152,7 +152,7 @@ class UserPostListView(APIView):
 
         posts = posts.order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
@@ -186,7 +186,7 @@ class GuestbookListView(APIView):
         profile, _ = UserProfile.objects.get_or_create(user=user)
         entries = profile.guestbook_entries.all()
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size

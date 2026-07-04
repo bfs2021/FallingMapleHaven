@@ -15,7 +15,7 @@ from apps.groups.serializers import (
     GroupMemberSerializer,
     GroupUpdateSerializer,
 )
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.chat.models import ChatRoom, ChatRoomMember
 from apps.feed.models import Post
 from apps.feed.serializers import PostSerializer
@@ -239,7 +239,7 @@ class GroupPostsView(APIView):
 
         posts = Post.objects.filter(group_id=pk).order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
