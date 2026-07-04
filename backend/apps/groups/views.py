@@ -237,7 +237,7 @@ class GroupPostsView(APIView):
         if not group.members.filter(user_id=request.user.id).exists():
             return api_response(code=40003, message="仅成员可查看组内动态", status=status.HTTP_403_FORBIDDEN)
 
-        posts = Post.objects.filter(group_id=pk).order_by("-created_at")
+        posts = Post.objects.filter(group_id=pk).select_related("author", "group").prefetch_related("images", "comments", "likes").order_by("-created_at")
 
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
