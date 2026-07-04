@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.notifications.models import Notification
+from apps.common.utils import api_response, safe_int
 from apps.plugins.utils import ensure_plugin_active
 from .models import AnonymousQuestion
 from .serializers import (
@@ -61,11 +62,26 @@ class InboxView(APIView):
             questions = questions.filter(is_answered=False)
         questions = questions.order_by("-created_at")
 
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = safe_int(request.query_params.get("page_size"), 20)
+        start = (page - 1) * page_size
+        end = start + page_size
+        total = questions.count()
+        page_questions = questions[start:end]
+
         if request.user.is_staff:
-            serializer = AdminQuestionSerializer(questions, many=True)
+            serializer = AdminQuestionSerializer(page_questions, many=True)
         else:
-            serializer = QuestionSerializer(questions, many=True)
-        return Response({"code": 0, "message": "success", "data": serializer.data})
+            serializer = QuestionSerializer(page_questions, many=True)
+        return Response({
+            "code": 0, "message": "success",
+            "data": {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "results": serializer.data,
+            }
+        })
 
 
 class AnswerView(APIView):
