@@ -184,7 +184,7 @@ class GuestbookListView(APIView):
             return user_not_found_response()
 
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        entries = profile.guestbook_entries.all()
+        entries = profile.guestbook_entries.select_related("author")
 
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
