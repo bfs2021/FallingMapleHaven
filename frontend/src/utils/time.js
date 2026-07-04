@@ -1,6 +1,9 @@
 export function relativeTime(dateString) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return ''
   const now = Date.now()
-  const diff = now - new Date(dateString).getTime()
+  const diff = now - date.getTime()
   const seconds = Math.floor(diff / 1000)
   if (seconds < 60) return '刚刚'
   const minutes = Math.floor(seconds / 60)
