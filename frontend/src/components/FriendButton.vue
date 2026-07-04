@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useFriendStore } from '@/stores/friend'
 
 const props = defineProps({
-  userId: { type: Number, required: true },
+  userId: { type: [Number, String], required: true },
   friendStatus: { type: String, default: 'none' },
 })
 
