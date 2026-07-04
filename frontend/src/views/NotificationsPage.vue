@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { notificationApi } from '@/api/notifications'
@@ -41,6 +41,8 @@ function stopPolling() {
 
 async function fetchUnreadCount() {
   try {
+    const scrollEl = document.querySelector('.overflow-auto, .notif-list')
+    const savedScroll = scrollEl?.scrollTop ?? 0
     const [listRes, countRes] = await Promise.all([
       notificationApi.list({ page: 1, page_size: 20 }),
       notificationApi.unreadCount(),
@@ -49,6 +51,8 @@ async function fetchUnreadCount() {
       notifications.value = listRes.data.results
       page.value = 1
       hasMore.value = listRes.data.page * listRes.data.page_size < listRes.data.total
+      await nextTick()
+      if (scrollEl) scrollEl.scrollTop = savedScroll
     }
     authStore.setUnreadCount(countRes.data?.count || 0)
   } catch { /* ignore */ }
@@ -60,7 +64,8 @@ async function fetchNotifications(reset = false) {
   try {
     if (reset) page.value = 1
     const res = await notificationApi.list({ page: page.value, page_size: 20 })
-    const results = res.data?.results || res.data || []
+    const raw = res.data?.results ?? res.data
+    const results = Array.isArray(raw) ? raw : []
     if (reset) {
       notifications.value = results
     } else {
