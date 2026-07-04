@@ -281,7 +281,7 @@ class CommentListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        comments = post.comments.filter(parent__isnull=True)
+        comments = post.comments.filter(parent__isnull=True).select_related("author")
         serializer = CommentSerializer(comments, many=True)
         return api_response(data=serializer.data)
 
