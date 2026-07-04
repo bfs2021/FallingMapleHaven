@@ -13,7 +13,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChatRoom
-        fields = ["id", "name", "type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
+        fields = ["id", "name", "room_type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
 
     def _cached_last_msg(self, obj):
         cache = getattr(self, '_msg_cache', {})
@@ -36,7 +36,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         request = self.context.get("request")
-        if obj.type == "private" and request:
+        if obj.room_type == "private" and request:
             other = self._cached_other_member(obj, request)
             return other.user.nickname if other else "已解散"
         return obj.name
@@ -65,7 +65,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
 
     def get_other_user(self, obj):
         request = self.context.get("request")
-        if obj.type == "private" and request:
+        if obj.room_type == "private" and request:
             other = self._cached_other_member(obj, request)
             if other:
                 return {

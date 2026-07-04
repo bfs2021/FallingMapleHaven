@@ -92,7 +92,7 @@ class RoomCreateView(APIView):
                 )
 
             existing = ChatRoom.objects.filter(
-                type="private", members__user_id=all_member_ids[0]
+                room_type="private", members__user_id=all_member_ids[0]
             ).filter(members__user_id=all_member_ids[1])
             if existing.exists():
                 room = existing.first()
@@ -102,7 +102,7 @@ class RoomCreateView(APIView):
         room = ChatRoom.objects.create(
             name=name,
             is_group=(room_type == "group"),
-            type=room_type,
+            room_type=room_type,
         )
 
         for uid in all_member_ids:

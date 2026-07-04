@@ -28,7 +28,7 @@ const otherUser = computed(() => {
   return currentRoom.value?.other_user || {}
 })
 
-const isGroupRoom = computed(() => currentRoom.value?.type === 'group')
+const isGroupRoom = computed(() => currentRoom.value?.room_type === 'group')
 
 const messages = computed(() => {
   return chatStore.messages[roomId.value] || []

@@ -9,7 +9,7 @@ class ChatRoom(models.Model):
 
     name = models.CharField(max_length=100, blank=True, null=True)
     is_group = models.BooleanField(default=False)
-    type = models.CharField(max_length=10, choices=Type.choices, default=Type.PRIVATE)
+    room_type = models.CharField(max_length=10, choices=Type.choices, default=Type.PRIVATE)
     group = models.ForeignKey(
         "groups.InterestGroup",
         on_delete=models.SET_NULL,
