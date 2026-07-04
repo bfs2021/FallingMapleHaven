@@ -113,6 +113,16 @@ class PostCreateView(APIView):
             if f.size > MAX_FILE_SIZE:
                 return api_response(code=40001, message=f"文件过大(最大50MB): {f.name}", data=None, status=status.HTTP_400_BAD_REQUEST)
 
+        group_id = serializer.validated_data.get("group_id")
+        if group_id is not None:
+            from apps.groups.models import InterestGroup
+            try:
+                group = InterestGroup.objects.get(pk=group_id)
+            except InterestGroup.DoesNotExist:
+                return api_response(code=40004, message="小组不存在", data=None, status=status.HTTP_404_NOT_FOUND)
+            if not group.members.filter(user_id=request.user.id).exists():
+                return api_response(code=40003, message="仅成员可向小组发布动态", data=None, status=status.HTTP_403_FORBIDDEN)
+
         with transaction.atomic():
             post = Post.objects.create(
                 author=request.user,
