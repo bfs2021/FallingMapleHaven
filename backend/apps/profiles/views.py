@@ -99,7 +99,7 @@ class VisitorListView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        visitors = VisitRecord.objects.filter(visited_user=user)
+        visitors = VisitRecord.objects.filter(visited_user=user).select_related("visitor")
 
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
