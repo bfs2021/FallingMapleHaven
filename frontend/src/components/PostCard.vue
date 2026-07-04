@@ -31,7 +31,7 @@ const showComments = ref(false)
 const comments = ref([])
 const commentsLoaded = ref(false)
 const commentCount = ref(props.post.comment_count || 0)
-const needsTruncation = props.post.content?.length > 150
+const needsTruncation = computed(() => props.post.content?.length > 150)
 
 function toggleComments() {
   showComments.value = !showComments.value
