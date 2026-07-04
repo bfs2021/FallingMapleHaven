@@ -30,7 +30,7 @@ class QuestionCreateView(APIView):
         question = AnonymousQuestion.objects.create(
             recipient_id=serializer.validated_data["recipient_id"],
             sender=request.user,
-            content=serializer.validated_data["content"],
+            content=strip_tags(serializer.validated_data["content"]),
             is_public=serializer.validated_data.get("is_public", True),
         )
         Notification.objects.create(
