@@ -66,7 +66,9 @@ class AdminUserUpdateView(APIView, AdminPermissionMixin):
         except User.DoesNotExist:
             return api_response(code=40004, message="用户不存在", status=status.HTTP_404_NOT_FOUND)
 
-        allowed_fields = {"is_active", "is_staff"}
+        allowed_fields = {"is_active"}
+        if request.user.is_superuser:
+            allowed_fields.add("is_staff")
         updates = {key: value for key, value in request.data.items() if key in allowed_fields}
         for key, value in updates.items():
             setattr(user, key, value)
