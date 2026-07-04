@@ -42,4 +42,4 @@ class Notification(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.type} to {self.recipient.username}"
+        return f"{self.notification_type} to {self.recipient.username}"

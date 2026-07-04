@@ -36,7 +36,7 @@ class QuestionCreateView(APIView):
         Notification.objects.create(
             recipient_id=serializer.validated_data["recipient_id"],
             sender=request.user,
-            type=Notification.Type.ANONYMOUS_QUESTION,
+            notification_type=Notification.Type.ANONYMOUS_QUESTION,
             title="收到匿名提问",
             content=strip_tags(serializer.validated_data["content"])[:100],
             link=f"/profile/{serializer.validated_data['recipient_id']}/plugins/question-box",

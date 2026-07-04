@@ -155,7 +155,7 @@ function notificationIcon(type) {
           class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
           :class="n.is_read ? 'bg-maple-100/50' : 'bg-maple-100'"
         >
-          <Icon :name="notificationIcon(n.type)" :size="18" :class="n.is_read ? 'text-maple-400' : 'text-maple-600'" />
+          <Icon :name="notificationIcon(n.notification_type)" :size="18" :class="n.is_read ? 'text-maple-400' : 'text-maple-600'" />
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm" :class="n.is_read ? 'text-text-secondary' : 'text-text-primary font-semibold'">

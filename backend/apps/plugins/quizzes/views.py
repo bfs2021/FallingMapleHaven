@@ -35,7 +35,7 @@ class QuizQuestionCreateView(APIView):
         Notification.objects.create(
             recipient_id=serializer.validated_data["target_user_id"],
             sender=request.user,
-            type=Notification.Type.QUIZ_INVITE,
+            notification_type=Notification.Type.QUIZ_INVITE,
             title="默契问答邀请",
             content=f"{request.user.nickname} 向你出了一道题",
             link=f"/profile/{question.target_user_id}/plugins/quiz",

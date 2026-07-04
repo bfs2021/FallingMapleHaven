@@ -305,7 +305,7 @@ class AdminPluginUpdateView(APIView, AdminPermissionMixin):
         return api_response(data={
             "id": plugin.id,
             "name": plugin.name,
-            "type": plugin.type,
+            "type": plugin.plugin_type,
             "is_active": plugin.is_active,
             "config": plugin.config,
             "created_at": plugin.created_at,
