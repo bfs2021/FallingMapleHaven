@@ -44,7 +44,7 @@ class RoomMessagesView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        messages = room.messages.all()
+        messages = room.messages.select_related("sender")
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 50
         start = (page - 1) * page_size
