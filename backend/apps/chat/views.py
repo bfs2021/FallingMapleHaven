@@ -50,7 +50,7 @@ class RoomMessagesView(APIView):
         start = (page - 1) * page_size
         end = start + page_size
         total = messages.count()
-        page_messages = messages.order_by("created_at")[start:end]
+        page_messages = messages.order_by("-created_at")[start:end]
 
         serializer = MessageSerializer(page_messages, many=True)
         ChatRoomMember.objects.filter(room=room, user=request.user).update(last_read_at=timezone.now())

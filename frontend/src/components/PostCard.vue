@@ -14,6 +14,8 @@ import Icon from './Icon.vue'
 
 const { confirm: confirmDelete } = useConfirm()
 
+const emit = defineEmits(['deleted', 'like-updated'])
+
 const props = defineProps({
   post: { type: Object, required: true },
   showActions: { type: Boolean, default: true },
@@ -49,6 +51,7 @@ async function deletePost() {
   if (!await confirmDelete({ title: '删除动态', message: '确认删除这条动态？此操作不可撤销。', variant: 'danger', confirmText: '删除' })) return
   try {
     await feedStore.deletePost(props.post.id)
+    emit('deleted', props.post.id)
   } catch { /* ignore */ }
 }
 
@@ -78,6 +81,7 @@ function goToProfile() {
           </span>
           <span v-if="post.visibility === 'friends'" class="text-[10px] px-1.5 py-0.5 bg-maple-100 text-maple-600 rounded">仅好友</span>
           <span v-if="post.visibility === 'private'" class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-text-secondary rounded">私密</span>
+          <span v-if="post.group" class="text-[10px] px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded">来自 {{ post.group.name }}</span>
         </div>
         <span class="text-xs text-text-secondary">{{ relativeTime(post.created_at) }}</span>
       </div>
@@ -143,6 +147,7 @@ function goToProfile() {
           :likeCount="post.like_count"
           :commentCount="post.comment_count"
           @toggle-comments="toggleComments"
+          @like-updated="(d) => emit('like-updated', { postId: post.id, ...d })"
         />
 
         <CommentSection

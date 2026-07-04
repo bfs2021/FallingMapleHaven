@@ -28,16 +28,19 @@ const otherUser = computed(() => {
   return currentRoom.value?.other_user || {}
 })
 
+const isGroupRoom = computed(() => currentRoom.value?.type === 'group')
+
 const messages = computed(() => {
   return chatStore.messages[roomId.value] || []
 })
 
 onMounted(async () => {
-  await Promise.all([
-    chatStore.fetchRooms(),
+  const [messagesData] = await Promise.all([
     chatStore.fetchMessages(roomId.value),
+    chatStore.fetchRooms(),
   ])
   messagePage.value = 1
+  hasMoreMessages.value = messagesData.page * messagesData.page_size < messagesData.total
   loading.value = false
   scrollToBottom()
 })
@@ -57,6 +60,7 @@ function scrollToBottom() {
 async function loadMore() {
   if (loadingMore.value || !hasMoreMessages.value) return
   loadingMore.value = true
+  const prevScrollTop = messageListRef.value?.scrollTop || 0
   const prevHeight = messageListRef.value?.scrollHeight || 0
   try {
     const data = await chatStore.fetchMessages(roomId.value, messagePage.value + 1)
@@ -64,7 +68,7 @@ async function loadMore() {
     hasMoreMessages.value = data.page * data.page_size < data.total
     await nextTick()
     if (messageListRef.value) {
-      messageListRef.value.scrollTop = messageListRef.value.scrollHeight - prevHeight
+      messageListRef.value.scrollTop = prevScrollTop + (messageListRef.value.scrollHeight - prevHeight)
     }
   } catch { /* ignore */ } finally {
     loadingMore.value = false
@@ -101,7 +105,11 @@ function goBack() {
         ‹
       </button>
       <AvatarImage :user="otherUser" size="sm" />
-      <span class="text-base font-medium text-text-primary truncate">{{ otherUser.nickname || otherUser.username || currentRoom?.name || '聊天' }}</span>
+      <template v-if="isGroupRoom">
+        <span class="text-base font-medium text-text-primary truncate">{{ currentRoom?.name }} ({{ currentRoom?.member_count }})</span>
+        <span class="flex-shrink-0 bg-maple-100 text-maple-700 text-xs px-2 py-0.5 rounded-full">群组</span>
+      </template>
+      <span v-else class="text-base font-medium text-text-primary truncate">{{ otherUser.nickname || otherUser.username || currentRoom?.name || '聊天' }}</span>
     </div>
 
     <div

@@ -44,9 +44,9 @@ class PostListView(APIView):
                 Q(visibility=Post.Visibility.PUBLIC)
                 | Q(visibility=Post.Visibility.FRIENDS, author_id__in=friend_id_set)
                 | Q(author=user)
-            )
+            ).filter(group_id__isnull=True)
         else:
-            posts = Post.objects.filter(visibility=Post.Visibility.PUBLIC)
+            posts = Post.objects.filter(visibility=Post.Visibility.PUBLIC, group_id__isnull=True)
 
         topic = request.query_params.get("topic", "").strip()
         if topic:
@@ -120,6 +120,7 @@ class PostCreateView(APIView):
                 visibility=visibility,
                 topic_tag=topic_tag,
                 group_id=serializer.validated_data.get("group_id"),
+                sync_to_profile=serializer.validated_data.get("sync_to_profile", False),
             )
 
             for idx, img in enumerate(image_files):
@@ -132,6 +133,20 @@ class PostCreateView(APIView):
                     name=f.name,
                     size=f.size,
                     order=idx,
+                )
+
+        if post.group_id:
+            from apps.groups.models import GroupMember
+            from apps.notifications.models import Notification
+            members = GroupMember.objects.filter(group_id=post.group_id).exclude(user=request.user).select_related("user")
+            for m in members:
+                Notification.objects.create(
+                    recipient=m.user,
+                    sender=request.user,
+                    type="group_new_post",
+                    title="小组新动态",
+                    content=f"{request.user.nickname} 在 {post.group.name} 发布了新动态",
+                    link="",
                 )
 
         return api_response(

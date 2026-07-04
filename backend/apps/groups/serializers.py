@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from apps.groups.models import InterestGroup, GroupMember
+from apps.chat.models import ChatRoom
+from apps.groups.models import GroupJoinRequest, GroupMember, InterestGroup
 
 
 class GroupMemberSerializer(serializers.ModelSerializer):
@@ -40,10 +41,11 @@ class GroupDetailSerializer(serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
     members = GroupMemberSerializer(many=True)
     cover_url = serializers.SerializerMethodField()
+    chat_room_id = serializers.SerializerMethodField()
 
     class Meta:
         model = InterestGroup
-        fields = ["id", "name", "description", "cover_url", "is_public", "owner", "member_count", "is_member", "members", "created_at", "updated_at"]
+        fields = ["id", "name", "description", "cover_url", "is_public", "owner", "member_count", "is_member", "members", "created_at", "updated_at", "chat_room_id"]
 
     def get_member_count(self, obj):
         return getattr(obj, 'member_count', None) or obj.members.count()
@@ -60,14 +62,35 @@ class GroupDetailSerializer(serializers.ModelSerializer):
     def get_cover_url(self, obj):
         return obj.cover_image.url if obj.cover_image else None
 
+    def get_chat_room_id(self, obj):
+        room = getattr(obj, '_chat_room', None)
+        if room is None:
+            room = ChatRoom.objects.filter(group=obj).first()
+        return room.id if room else None
+
 
 class GroupCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InterestGroup
-        fields = ["name", "description", "is_public"]
+        fields = ["name", "description", "cover_image", "is_public"]
 
 
 class GroupUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InterestGroup
         fields = ["name", "description", "cover_image", "is_public"]
+
+
+class GroupJoinRequestSerializer(serializers.ModelSerializer):
+    applicant = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GroupJoinRequest
+        fields = ["id", "applicant", "status", "created_at"]
+
+    def get_applicant(self, obj):
+        return {
+            "user_id": obj.applicant.id,
+            "nickname": obj.applicant.nickname,
+            "avatar_url": obj.applicant.avatar.url if obj.applicant.avatar else None,
+        }

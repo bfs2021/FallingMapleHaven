@@ -44,3 +44,26 @@ class GroupMember(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.group.name} ({self.role})"
+
+
+class GroupJoinRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "待处理"
+        APPROVED = "approved", "已通过"
+        REJECTED = "rejected", "已拒绝"
+
+    group = models.ForeignKey(InterestGroup, on_delete=models.CASCADE, related_name="join_requests")
+    applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="group_join_requests")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    handled_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="handled_join_requests")
+    handled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "groups_groupjoinrequest"
+        constraints = [
+            models.UniqueConstraint(fields=["group", "applicant"], name="uq_group_join_request")
+        ]
+
+    def __str__(self):
+        return f"{self.applicant.username} -> {self.group.name} ({self.status})"

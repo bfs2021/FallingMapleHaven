@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -16,8 +16,9 @@ from apps.admin_dashboard.serializers import (
     AdminUserSerializer,
 )
 from apps.common.utils import api_response
-from apps.chat.models import Message
+from apps.chat.models import ChatRoom, Message
 from apps.feed.models import Comment, Post
+from apps.groups.models import InterestGroup, GroupMember
 from apps.plugins.models import Plugin
 from apps.plugins.registry import PluginRegistry
 
@@ -429,4 +430,102 @@ class AdminTrendsView(APIView, AdminPermissionMixin):
             "comments": list(comment_trends),
             "visits": list(visit_trends),
             "friendships": list(friend_trends),
+        })
+
+
+class AdminGroupListView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        groups = InterestGroup.objects.annotate(member_count=Count('members'))
+        search = request.query_params.get("search", "").strip()
+        if search:
+            groups = groups.filter(name__icontains=search)
+        groups = groups.order_by("-created_at")
+
+        data = []
+        for g in groups:
+            data.append({
+                "id": g.id,
+                "name": g.name,
+                "description": g.description,
+                "cover_url": g.cover_image.url if g.cover_image else None,
+                "is_public": g.is_public,
+                "creator_name": g.creator.nickname,
+                "member_count": g.member_count,
+                "created_at": g.created_at,
+            })
+        return api_response(data=data)
+
+
+class AdminGroupDeleteView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        try:
+            group = InterestGroup.objects.get(pk=pk)
+        except InterestGroup.DoesNotExist:
+            return api_response(code=40004, message="小组不存在", status=status.HTTP_404_NOT_FOUND)
+
+        group_info = {"id": group.id, "name": group.name, "creator": group.creator.nickname}
+
+        GroupMember.objects.filter(group=group).delete()
+        ChatRoom.objects.filter(group_id=pk).delete()
+        Post.objects.filter(group_id=pk).update(group=None)
+        group.delete()
+
+        SiteLog.objects.create(
+            user=request.user,
+            action="delete_group",
+            detail=group_info,
+            ip_address=request.META.get("REMOTE_ADDR"),
+        )
+
+        return api_response(message="小组已删除")
+
+
+class AdminGroupPostsView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        try:
+            group = InterestGroup.objects.get(pk=pk)
+        except InterestGroup.DoesNotExist:
+            return api_response(code=40004, message="小组不存在", status=status.HTTP_404_NOT_FOUND)
+
+        posts = Post.objects.filter(group_id=pk).select_related('author').order_by("-created_at")
+
+        page = int(request.query_params.get("page", 1))
+        page_size = 20
+        total = posts.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_posts = posts[start:end]
+
+        results = []
+        for p in page_posts:
+            results.append({
+                "id": p.id,
+                "author_name": p.author.nickname,
+                "content": p.content,
+                "created_at": p.created_at,
+            })
+
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": results,
         })

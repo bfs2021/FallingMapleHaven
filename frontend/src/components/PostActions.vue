@@ -9,11 +9,12 @@ const props = defineProps({
   commentCount: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['toggle-comments'])
+const emit = defineEmits(['toggle-comments', 'like-updated'])
 const feedStore = useFeedStore()
 
-function handleLike() {
-  feedStore.toggleLike(props.postId)
+async function handleLike() {
+  const res = await feedStore.toggleLike(props.postId)
+  emit('like-updated', res.data)
 }
 </script>
 

@@ -17,8 +17,18 @@ export const questionBoxApi = {
 export const groupApi = {
   list: () => client.get('/groups/'),
   detail: (id) => client.get(`/groups/${id}/`),
-  create: (data) => client.post('/groups/create/', data),
+  create: (data) => client.post('/groups/create/', data, {
+    headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {},
+  }),
+  update: (id, data) => client.patch(`/groups/${id}/update/`, data, {
+    headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {},
+  }),
   join: (id) => client.post(`/groups/${id}/join/`),
   leave: (id) => client.post(`/groups/${id}/leave/`),
-  posts: (id) => client.get(`/groups/${id}/posts/`),
+  manageMember: (id, userId, action) => client.post(`/groups/${id}/members/${userId}/`, { action }),
+  posts: (id, params) => client.get(`/groups/${id}/posts/`, { params }),
+  delete: (id) => client.post(`/groups/${id}/delete/`),
+  transfer: (id, data) => client.post(`/groups/${id}/transfer/`, data),
+  joinRequests: (id) => client.get(`/groups/${id}/join-requests/`),
+  handleJoinRequest: (id, requestId, action) => client.post(`/groups/${id}/join-requests/${requestId}/handle/`, { action }),
 }

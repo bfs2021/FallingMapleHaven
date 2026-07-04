@@ -9,10 +9,11 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
     last_message_at = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     other_user = serializers.SerializerMethodField()
+    member_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
-        fields = ["id", "name", "type", "last_message", "last_message_at", "unread_count", "other_user"]
+        fields = ["id", "name", "type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
 
     def get_name(self, obj):
         request = self.context.get("request")
@@ -50,6 +51,11 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
                     "nickname": other.user.nickname,
                     "avatar_url": other.user.avatar.url if other.user.avatar else None,
                 }
+        return None
+
+    def get_member_count(self, obj):
+        if obj.type == "group" and obj.group:
+            return obj.group.members.count()
         return None
 
 

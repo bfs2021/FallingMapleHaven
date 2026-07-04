@@ -103,7 +103,7 @@ function handleNotificationClick(n) {
 }
 
 function notificationIcon(type) {
-  const icons = { like: 'heart', comment: 'messageCircle', reply: 'messageSquare', friend_request: 'userPlus', friend_accepted: 'userCheck', system: 'bell', quiz_invite: 'helpCircle', anonymous_question: 'messageSquare' }
+  const icons = { like: 'heart', comment: 'messageCircle', reply: 'messageSquare', friend_request: 'userPlus', friend_accepted: 'userCheck', system: 'bell', quiz_invite: 'helpCircle', anonymous_question: 'messageSquare', group_join_request: 'userPlus', group_request_approved: 'userCheck', group_request_rejected: 'xCircle', group_member_joined: 'users', group_new_post: 'messageCircle' }
   return icons[type] || 'bell'
 }
 </script>

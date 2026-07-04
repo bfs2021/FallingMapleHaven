@@ -27,6 +27,7 @@ class Post(models.Model):
         default=Visibility.PUBLIC,
     )
     topic_tag = models.CharField(max_length=50, blank=True, default="")
+    sync_to_profile = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 

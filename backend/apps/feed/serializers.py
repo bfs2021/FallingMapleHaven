@@ -25,6 +25,7 @@ class PostSerializer(serializers.ModelSerializer):
     comment_count = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    group = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -35,6 +36,8 @@ class PostSerializer(serializers.ModelSerializer):
             "visibility",
             "topic_tag",
             "group_id",
+            "group",
+            "sync_to_profile",
             "images",
             "image_urls",
             "files",
@@ -63,6 +66,11 @@ class PostSerializer(serializers.ModelSerializer):
             return False
         return obj.likes.filter(user=request.user).exists()
 
+    def get_group(self, obj):
+        if obj.group_id:
+            return {"id": obj.group_id, "name": obj.group.name}
+        return None
+
 
 class PostCreateSerializer(serializers.Serializer):
     content = serializers.CharField(required=True, max_length=2000)
@@ -71,6 +79,7 @@ class PostCreateSerializer(serializers.Serializer):
     )
     topic_tag = serializers.CharField(required=False, allow_blank=True, default="")
     group_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+    sync_to_profile = serializers.BooleanField(required=False, default=False)
     images = serializers.ListField(
         child=serializers.FileField(), required=False, default=list
     )

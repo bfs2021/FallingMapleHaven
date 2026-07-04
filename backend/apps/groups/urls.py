@@ -5,9 +5,13 @@ from apps.groups.views import (
     GroupDetailView,
     GroupUpdateView,
     GroupJoinView,
+    GroupJoinRequestHandleView,
+    GroupJoinRequestListView,
     GroupLeaveView,
     GroupMemberManageView,
     GroupPostsView,
+    GroupDeleteView,
+    GroupTransferView,
 )
 
 urlpatterns = [
@@ -19,4 +23,8 @@ urlpatterns = [
     path("<int:pk>/leave/", GroupLeaveView.as_view(), name="group-leave"),
     path("<int:pk>/members/<int:user_id>/", GroupMemberManageView.as_view(), name="group-member-manage"),
     path("<int:pk>/posts/", GroupPostsView.as_view(), name="group-posts"),
+    path("<int:pk>/delete/", GroupDeleteView.as_view(), name="group-delete"),
+    path("<int:pk>/transfer/", GroupTransferView.as_view(), name="group-transfer"),
+    path("<int:pk>/join-requests/", GroupJoinRequestListView.as_view(), name="group-join-requests"),
+    path("<int:pk>/join-requests/<int:request_id>/handle/", GroupJoinRequestHandleView.as_view(), name="group-join-request-handle"),
 ]

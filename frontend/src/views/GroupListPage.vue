@@ -3,14 +3,18 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { groupApi } from '@/api/plugin'
+import { useToast } from '@/composables/useToast'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
 const groups = ref([])
 const loading = ref(true)
 const showCreateModal = ref(false)
 const createForm = ref({ name: '', description: '', is_public: true })
+const coverFile = ref(null)
 const creating = ref(false)
 const createError = ref('')
 
@@ -33,9 +37,18 @@ async function createGroup() {
   creating.value = true
   createError.value = ''
   try {
-    await groupApi.create(createForm.value)
+    const formData = new FormData()
+    formData.append('name', createForm.value.name)
+    formData.append('description', createForm.value.description)
+    formData.append('is_public', createForm.value.is_public)
+    if (coverFile.value) {
+      formData.append('cover_image', coverFile.value)
+    }
+    await groupApi.create(formData)
     showCreateModal.value = false
     createForm.value = { name: '', description: '', is_public: true }
+    coverFile.value = null
+    toast.success('小组创建成功')
     await fetchGroups()
   } catch (e) {
     createError.value = e.response?.data?.message || '创建失败'
@@ -60,15 +73,25 @@ function goToDetail(id) {
       <button
         v-if="authStore.isAuthenticated"
         @click="showCreateModal = true"
-        class="px-4 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors cursor-pointer"
+        class="btn-primary px-4"
       >
         + 创建小组
       </button>
     </div>
 
-    <div v-if="loading" class="text-center text-text-secondary py-8">加载中...</div>
+    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div v-for="i in 4" :key="i" class="card-base overflow-hidden">
+        <div class="h-32 skeleton" />
+        <div class="p-4 space-y-3">
+          <div class="h-5 w-32 skeleton" />
+          <div class="h-4 w-full skeleton" />
+          <div class="h-4 w-24 skeleton" />
+        </div>
+      </div>
+    </div>
 
     <div v-else-if="!groups.length" class="text-center text-text-secondary py-16">
+      <Icon name="users" :size="48" class="mx-auto mb-3 text-maple-300" />
       <p class="text-lg mb-2">还没有小组</p>
       <p class="text-sm">创建一个吧</p>
     </div>
@@ -78,7 +101,7 @@ function goToDetail(id) {
         v-for="group in groups"
         :key="group.id"
         @click="goToDetail(group.id)"
-        class="bg-white rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+        class="card-base overflow-hidden cursor-pointer"
       >
         <div class="h-32 bg-gradient-to-r from-maple-600 to-maple-400 relative">
           <img
@@ -91,7 +114,7 @@ function goToDetail(id) {
           <h3 class="font-medium text-text-primary">{{ group.name }}</h3>
           <p v-if="group.description" class="text-sm text-text-secondary mt-1 line-clamp-2">{{ group.description }}</p>
           <div class="flex items-center gap-4 mt-3 text-xs text-text-secondary">
-            <span>👥 {{ group.member_count || 0 }} 名成员</span>
+            <span class="flex items-center gap-1"><Icon name="users" :size="14" /> {{ group.member_count || 0 }} 名成员</span>
             <span v-if="!group.is_public" class="px-1.5 py-0.5 bg-gray-100 rounded">私密</span>
           </div>
         </div>
@@ -109,7 +132,7 @@ function goToDetail(id) {
                 v-model="createForm.name"
                 type="text"
                 placeholder="输入小组名称"
-                class="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600"
+                class="input-base"
               />
             </div>
             <div>
@@ -118,11 +141,18 @@ function goToDetail(id) {
                 v-model="createForm.description"
                 rows="3"
                 placeholder="小组简介（可选）"
-                class="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600 resize-none"
+                class="input-base resize-none"
               />
             </div>
+            <div>
+              <label class="block text-sm font-medium text-text-primary mb-1">封面图（可选）</label>
+              <label class="flex items-center gap-2 px-3 py-2.5 border border-border rounded-lg text-sm text-text-secondary cursor-pointer hover:bg-maple-50 transition-colors">
+                <input type="file" accept="image/*" @change="e => coverFile = e.target.files[0] || null" class="hidden" />
+                <span>{{ coverFile ? coverFile.name : '选择封面图片' }}</span>
+              </label>
+            </div>
             <div class="flex items-center justify-between">
-              <span class="text-sm text-text-primary">公开小组（任何人都可加入）</span>
+              <span class="text-sm text-text-primary cursor-pointer select-none" @click="createForm.is_public = !createForm.is_public">公开小组（任何人都可加入）</span>
               <ToggleSwitch v-model="createForm.is_public" />
             </div>
           </div>
@@ -130,14 +160,14 @@ function goToDetail(id) {
           <div class="flex gap-3 mt-6 justify-end">
             <button
               @click="showCreateModal = false"
-              class="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+              class="btn-ghost"
             >
               取消
             </button>
             <button
               @click="createGroup"
               :disabled="creating || !createForm.name.trim()"
-              class="px-5 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer"
+              class="btn-primary px-5"
             >
               {{ creating ? '创建中...' : '创建' }}
             </button>

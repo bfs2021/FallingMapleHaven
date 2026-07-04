@@ -19,12 +19,13 @@ export const useChatStore = defineStore('chat', {
       this.rooms = res.data || []
     },
     async fetchMessages(roomId, page = 1) {
-      const res = await chatApi.messages(roomId, { page, page_size: 50 })
+      const res = await chatApi.messages(roomId, page)
+      const results = (res.data?.results || []).slice().reverse()
       if (page === 1) {
-        this.messages[roomId] = res.data?.results || []
+        this.messages[roomId] = results
       } else {
         const existing = this.messages[roomId] || []
-        this.messages[roomId] = [...(res.data?.results || []), ...existing]
+        this.messages[roomId] = [...results, ...existing]
       }
       return res.data
     },

@@ -1,5 +1,8 @@
 from django.urls import path
 from apps.admin_dashboard.views import (
+    AdminGroupListView,
+    AdminGroupDeleteView,
+    AdminGroupPostsView,
     AdminUserListView,
     AdminUserUpdateView,
     AdminPostListView,
@@ -33,4 +36,7 @@ urlpatterns = [
     path("logs/", AdminLogsView.as_view(), name="admin-logs"),
     path("logs/actions/", AdminLogActionsView.as_view(), name="admin-log-actions"),
     path("trends/", AdminTrendsView.as_view(), name="admin-trends"),
+    path("groups/", AdminGroupListView.as_view(), name="admin-groups"),
+    path("groups/<int:pk>/", AdminGroupDeleteView.as_view(), name="admin-group-delete"),
+    path("groups/<int:pk>/posts/", AdminGroupPostsView.as_view(), name="admin-group-posts"),
 ]

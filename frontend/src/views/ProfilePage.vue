@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { profileApi } from '@/api/profiles'
 import { useConfirm } from '@/composables/useConfirm'
@@ -135,6 +135,11 @@ async function toggleUserBan() {
 function onFriendStatusChanged(status) {
   if (profile.value) profile.value.friend_status = status
 }
+
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/')
+}
 </script>
 
 <template>
@@ -173,14 +178,30 @@ function onFriendStatusChanged(status) {
         <span class="text-sm text-text-secondary flex items-center gap-1.5">
           <Icon name="user" :size="14" /> {{ profile.visitor_count || 0 }} 次访问
         </span>
-        <FriendButton
-          v-if="!isGuest"
-          :userId="userId"
-          :friendStatus="profile.friend_status || 'none'"
-          @status-changed="onFriendStatusChanged"
-        />
+          <FriendButton
+            v-if="!isGuest"
+            :userId="userId"
+            :friendStatus="profile.friend_status || 'none'"
+            @status-changed="onFriendStatusChanged"
+          />
+          <div v-if="isOwner" class="flex items-center gap-2 ml-auto">
+            <RouterLink
+              to="/settings"
+              class="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-text-secondary hover:bg-maple-50 hover:text-maple-600 transition-colors active:scale-[0.97]"
+              title="个人设置"
+            >
+              <Icon name="settings" :size="18" />
+            </RouterLink>
+            <button
+              @click="handleLogout"
+              class="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors active:scale-[0.97]"
+              title="退出登录"
+            >
+              <Icon name="logOut" :size="18" />
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
 
     <div v-if="authStore.isAdmin && userId !== authStore.user?.user_id" class="px-4 mt-4">
       <button

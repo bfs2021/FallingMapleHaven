@@ -11,6 +11,7 @@ const builtinNavItems = [
   { path: '/admin', name: '数据统计', icon: 'barChart', exact: true },
   { path: '/admin/users', name: '用户管理', icon: 'users' },
   { path: '/admin/posts', name: '内容管理', icon: 'fileText' },
+  { path: '/admin/groups', name: '群组管理', icon: 'hash' },
   { path: '/admin/plugins', name: '插件管理', icon: 'puzzle' },
   { path: '/admin/settings', name: '站点设置', icon: 'settings' },
   { path: '/admin/logs', name: '操作日志', icon: 'scrollText' },

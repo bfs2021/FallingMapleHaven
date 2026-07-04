@@ -12,6 +12,11 @@ class Notification(models.Model):
         REPLY = "reply", "回复"
         QUIZ_INVITE = "quiz_invite", "默契问答邀请"
         ANONYMOUS_QUESTION = "anonymous_question", "匿名提问"
+        GROUP_JOIN_REQUEST = "group_join_request", "加入小组申请"
+        GROUP_REQUEST_APPROVED = "group_request_approved", "加入申请通过"
+        GROUP_REQUEST_REJECTED = "group_request_rejected", "加入申请拒绝"
+        GROUP_MEMBER_JOINED = "group_member_joined", "新成员加入"
+        GROUP_NEW_POST = "group_new_post", "小组新动态"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -25,7 +30,7 @@ class Notification(models.Model):
         blank=True,
         related_name="sent_notifications",
     )
-    type = models.CharField(max_length=20, choices=Type.choices)
+    type = models.CharField(max_length=50, choices=Type.choices)
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True, null=True)
     link = models.CharField(max_length=500, blank=True, null=True)
