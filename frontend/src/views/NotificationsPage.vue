@@ -41,8 +41,7 @@ function stopPolling() {
 
 async function fetchUnreadCount() {
   try {
-    const scrollEl = document.querySelector('.overflow-auto, .notif-list')
-    const savedScroll = scrollEl?.scrollTop ?? 0
+    const savedScroll = window.scrollY
     const [listRes, countRes] = await Promise.all([
       notificationApi.list({ page: 1, page_size: 20 }),
       notificationApi.unreadCount(),
@@ -52,7 +51,7 @@ async function fetchUnreadCount() {
       page.value = 1
       hasMore.value = listRes.data.page * listRes.data.page_size < listRes.data.total
       await nextTick()
-      if (scrollEl) scrollEl.scrollTop = savedScroll
+      window.scrollTo(0, savedScroll)
     }
     authStore.setUnreadCount(countRes.data?.count || 0)
   } catch { /* ignore */ }
