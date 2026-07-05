@@ -9,7 +9,7 @@ DEBUG = False
 
 SECRET_KEY = env("SECRET_KEY")
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 DATABASES = {
     "default": env.db("DATABASE_URL", default="postgres://fm_user:fm_dev_password@localhost:5432/fallingmaple"),
