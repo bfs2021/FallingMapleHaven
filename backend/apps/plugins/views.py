@@ -27,7 +27,7 @@ class PluginSummaryView(APIView):
         from apps.plugins.models import Plugin as PluginModel
 
         active_types = set(
-            PluginModel.objects.filter(is_active=True).values_list("type", flat=True)
+            PluginModel.objects.filter(is_active=True).values_list("plugin_type", flat=True)
         )
         summaries = []
         for plugin in PluginRegistry.get_all_plugins().values():
@@ -48,7 +48,7 @@ class ProfilePluginCardsView(APIView):
         viewer_id = request.user.id if request.user.is_authenticated else None
 
         active_types = set(
-            PluginModel.objects.filter(is_active=True).values_list("type", flat=True)
+            PluginModel.objects.filter(is_active=True).values_list("plugin_type", flat=True)
         )
         cards = []
         for plugin in PluginRegistry.get_all_plugins().values():
