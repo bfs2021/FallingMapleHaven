@@ -130,7 +130,7 @@ class GroupJoinView(APIView):
 
             return api_response(message="申请已发送，等待组长审核")
 
-        GroupMember.objects.create(group=group, user=request.user)
+        GroupMember.objects.get_or_create(group=group, user=request.user)
 
         room = ChatRoom.objects.filter(group=group).first()
         if room and not ChatRoomMember.objects.filter(room=room, user=request.user).exists():
@@ -366,7 +366,7 @@ class GroupJoinRequestHandleView(APIView):
         applicant = join_request.applicant
 
         if action == "approved":
-            GroupMember.objects.create(group=group, user=applicant)
+            GroupMember.objects.get_or_create(group=group, user=applicant)
 
             room = ChatRoom.objects.filter(group=group).first()
             if room and not ChatRoomMember.objects.filter(room=room, user=applicant).exists():
