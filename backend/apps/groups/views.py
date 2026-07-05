@@ -315,6 +315,10 @@ class GroupTransferView(APIView):
             group.creator = new_owner_membership.user
             group.save()
 
+            room = ChatRoom.objects.filter(group=group).first()
+            if room:
+                ChatRoomMember.objects.get_or_create(room=room, user_id=new_owner_id)
+
         return api_response(
             data=GroupDetailSerializer(group, context={"request": request}).data
         )
