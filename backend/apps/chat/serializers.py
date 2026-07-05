@@ -15,13 +15,6 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         model = ChatRoom
         fields = ["id", "name", "room_type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
 
-    def _cached_last_msg(self, obj):
-        cache = getattr(self, '_msg_cache', {})
-        if obj.id not in cache:
-            cache[obj.id] = obj.messages.order_by("-created_at").first()
-            self._msg_cache = cache
-        return cache[obj.id]
-
     def _cached_other_member(self, obj, request):
         cache = getattr(self, '_member_cache', {})
         if obj.id not in cache:
@@ -42,12 +35,10 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         return obj.name
 
     def get_last_message(self, obj):
-        msg = self._cached_last_msg(obj)
-        return msg.content if msg else None
+        return getattr(obj, '_last_msg_content', None)
 
     def get_last_message_at(self, obj):
-        msg = self._cached_last_msg(obj)
-        return msg.created_at if msg else None
+        return getattr(obj, '_last_msg_at', None)
 
     def get_unread_count(self, obj):
         request = self.context.get("request")
