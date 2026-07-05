@@ -20,20 +20,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if key == b"origin":
                 origin = value.decode()
                 break
-        if origin:
-            allowed = False
-            for host in settings.ALLOWED_HOSTS:
-                if host == "*":
-                    allowed = True
-                    break
-                parsed = urlparse(origin)
-                hostname = parsed.hostname or ""
-                if hostname == host or hostname.endswith("." + host):
-                    allowed = True
-                    break
-            if not allowed:
-                await self.close()
-                return
+        if origin is None:
+            await self.close()
+            return
+        allowed = False
+        for host in settings.ALLOWED_HOSTS:
+            if host == "*":
+                allowed = True
+                break
+            parsed = urlparse(origin)
+            hostname = parsed.hostname or ""
+            if hostname == host or hostname.endswith("." + host):
+                allowed = True
+                break
+        if not allowed:
+            await self.close()
+            return
 
         self.user = self.scope.get("user")
         if not self.user or not self.user.is_authenticated:
