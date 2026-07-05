@@ -132,7 +132,7 @@ async function fetchPosts(reset = false) {
   try {
     if (reset) postPage.value = 1
     const res = await groupApi.posts(groupId.value, { page: postPage.value, page_size: 20 })
-    const results = res.data?.results || res.data || []
+    const results = res.data?.results ?? res.data ?? []
     if (reset) {
       posts.value = results
     } else {
