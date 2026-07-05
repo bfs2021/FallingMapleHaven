@@ -12,7 +12,7 @@ async function fetchUsers() {
   error.value = ''
   try {
     const res = await adminApi.users()
-    users.value = res.data || []
+    users.value = res.data?.results || []
   } catch {
     error.value = '用户列表加载失败'
   } finally {
@@ -91,7 +91,7 @@ onMounted(fetchUsers)
             <td class="px-4 py-3 text-right">
               <button
                 @click="toggleUserActive(user)"
-                class="btn-ghost text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                class="btn-ghost text-xs"
               >
                 {{ user.is_active ? '禁用' : '启用' }}
               </button>
