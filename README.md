@@ -458,7 +458,7 @@ Tailwind 配置见 `frontend/tailwind.config.js`，其中还定义了自定义�
 
 ## 开发约定
 
-- **分支策略**：当前开发在 `UIUX` 分支上进行（基于 `master`）
+- **分支策略**：当前开发在 `BugFixer` 分支上进行（基于 `main`）
 - **后端架构**：Django 5 + DRF，Session 认证，统一响应格式 `{code, message, data}`
 - **前端架构**：Vue 3 Composition API + Tailwind CSS，使用 `@/` 路径别名指向 `src/`
 - **组件规范**：公共组件统一放在 `src/components/`，使用 `card-base`、`btn-primary`、`btn-secondary`、`btn-ghost`、`input-base`、`skeleton`、`page-title` 等设计系统类

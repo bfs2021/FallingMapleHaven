@@ -73,6 +73,64 @@
 
 ---
 
+---
+
+## 2026-07-04 — ISSUE.md 全栈审计
+
+来源：`ISSUE.md`，共 66 项（C7/H23/M21/L15），以下为已完全修复项：
+
+### 🔴 Critical（7/7 已修复）
+- C1 文件上传用 FormData
+- C2 3 图布局重复/缺失
+- C3 滚动加载页码双重递增
+- C4 `int()` 无异常处理 11 处 → `safe_int`
+- C5 WebSocket 房间订阅仅连接时执行
+- C6 `get_unread_count` 每次 COUNT
+- C7 `safe_int` 未导入致 500
+
+### 🟠 High（17/23 已修复）
+- H1 staff 可越权授 staff
+- H2 排行榜字段名错误 500
+- H5 点赞/评论数 `.count()` 忽略预取
+- H6 访客足迹去重/限流
+- H7 任意用户向任意小组发帖
+- H8 直接修改 prop
+- H9 相对时间无输入验证
+- H11 Axios 401 绕过 logout
+- H12 PostListView 缺 select_related
+- H13 VisitorListView 缺 select_related
+- H14 UserPostListView N+1
+- H15 GroupPostsView 无预取
+- H16 CommentListView N+1
+- H17 RoomMessagesView N+1
+- H18 GuestbookListView N+1
+- H19 AdminQuizQuestionsView N+1
+- H3 管理后台分页（5/7 视图已修复，AdminGroupListView + AdminQuizQuestionsView 待修复）
+- H4 聊天室列表序列化器 N+1（主要修复，2 处小残留）
+
+### 🟡 Medium（13/21 已修复）
+- M1 ImageField 替换 FileField（groups cover 待修）
+- M2 PIL verify 不充分
+- M3 批量通知逐条 create → bulk_create
+- M4 WebSocket 消息静默截断
+- M7 默认密钥不安全
+- M9 路由守卫 Session
+- M10 PostDetailView 小组可见性
+- M11 FriendButton prop 类型
+- M12 ensureSession 永久挂起
+- M14 fetchNotifications 回退不安全
+- M16 needsTruncation 非计算属性
+- M17 WebSocket 来源验证
+- M18 匿名提问分页（随 C7 修复）
+- M6 通知 HTML 过滤（部分修复：content 未 strip_tags）
+- M8 `type` 字段遮蔽内置（2 处遗漏）
+- M13 通知轮询滚动位置（选择器不匹配）
+
+### 🔵 Low（0/15 已修复）
+- 全部 15 项 Low 待修复
+
+---
+
 ## 归档说明
 
 以下原始文件已保留但内容过时，如需查阅详情请直接打开：
