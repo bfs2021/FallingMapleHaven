@@ -73,7 +73,7 @@ onMounted(fetchPlugins)
             @update:modelValue="togglePlugin(plugin)"
           />
         </div>
-        <p class="text-xs text-text-secondary">类型: {{ plugin.plugin_type }}</p>
+        <p class="text-xs text-text-secondary">类型: {{ plugin.type }}</p>
         <p class="text-xs text-text-secondary">{{ plugin.description || '暂无描述' }}</p>
       </div>
     </div>

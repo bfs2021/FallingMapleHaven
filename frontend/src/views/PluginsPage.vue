@@ -36,7 +36,7 @@ async function togglePlugin(plugin) {
   if (!authStore.isAdmin) return
   try {
     const res = await adminApi.plugins()
-    const target = res.data?.find(p => p.type === plugin.plugin_type)
+    const target = res.data?.find(p => p.type === plugin.type)
     if (target) {
       await adminApi.updatePlugin(target.id, { is_active: !plugin.is_active })
       plugin.is_active = !plugin.is_active
@@ -71,7 +71,7 @@ onMounted(fetchPlugins)
     <div v-else class="space-y-3">
       <div
         v-for="plugin in plugins"
-        :key="plugin.plugin_type"
+        :key="plugin.type"
         class="card-base p-5 flex items-center gap-4"
         :class="plugin.is_active
           ? 'hover:-translate-y-0.5 cursor-pointer'
@@ -100,7 +100,7 @@ onMounted(fetchPlugins)
           <p class="text-xs text-text-secondary mt-0.5 truncate">{{ plugin.description }}</p>
 
           <div v-if="plugin.is_active && plugin.data" class="flex items-center gap-4 mt-2">
-            <template v-if="plugin.plugin_type === 'quiz'">
+            <template v-if="plugin.type === 'quiz'">
               <span class="text-xs text-maple-600 font-medium">
                 平均匹配度 {{ plugin.data.avg_match_rate || 0 }}%
               </span>
@@ -108,7 +108,7 @@ onMounted(fetchPlugins)
                 最佳: {{ plugin.data.best_friend_name }} ({{ plugin.data.best_match_rate }}%)
               </span>
             </template>
-            <template v-else-if="plugin.plugin_type === 'question_box'">
+            <template v-else-if="plugin.type === 'question_box'">
               <span class="text-xs text-maple-600 font-medium">
                 {{ plugin.data.unanswered_count || 0 }} 条未答
               </span>

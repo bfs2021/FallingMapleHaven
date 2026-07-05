@@ -267,7 +267,7 @@ class AdminPluginListView(APIView, AdminPermissionMixin):
             {
                 "id": p.id,
                 "name": p.name,
-                "type": p.type,
+                "type": p.plugin_type,
                 "is_active": p.is_active,
                 "config": p.config,
                 "created_at": p.created_at,

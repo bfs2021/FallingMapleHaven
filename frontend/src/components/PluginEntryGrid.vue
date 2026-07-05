@@ -20,7 +20,7 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
   <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
     <button
       v-for="plugin in plugins"
-      :key="plugin.route || plugin.plugin_type"
+      :key="plugin.route || plugin.type"
       @click="emit('navigate', plugin)"
       class="flex flex-col items-start gap-1.5 p-4 bg-white rounded-xl border border-border shadow-card hover:border-maple-300 hover:shadow-float transition-all flex-shrink-0 cursor-pointer min-h-[44px] w-44 text-left active:scale-[0.97]"
     >
@@ -31,7 +31,7 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
 
       <!-- Data summary -->
       <div v-if="plugin.data" class="w-full space-y-0.5">
-        <template v-if="plugin.plugin_type === 'quiz'">
+        <template v-if="plugin.type === 'quiz'">
           <p class="text-lg font-bold text-maple-600 leading-tight">
             {{ plugin.data.match_score ?? plugin.data.avg_match_rate ?? '—' }}%
           </p>
@@ -39,7 +39,7 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
             {{ plugin.data.total_questions ?? plugin.data.friend_count ?? 0 }} 题
           </p>
         </template>
-        <template v-else-if="plugin.plugin_type === 'question_box'">
+        <template v-else-if="plugin.type === 'question_box'">
           <p class="text-lg font-bold text-maple-600 leading-tight">
             {{ plugin.data.unanswered_count ?? 0 }}
           </p>
@@ -47,7 +47,7 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
             未答 / 共 {{ plugin.data.total_questions ?? 0 }} 条
           </p>
         </template>
-        <template v-else-if="plugin.plugin_type === 'guestbook'">
+        <template v-else-if="plugin.type === 'guestbook'">
           <p class="text-lg font-bold text-maple-600 leading-tight">
             {{ plugin.data.total_messages ?? 0 }}
           </p>
