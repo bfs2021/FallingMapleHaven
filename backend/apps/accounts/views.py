@@ -68,7 +68,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         login(request, user)
-        return api_response(data=UserSerializer(user).data)
+        return api_response(data=UserSerializer(user, context={"request": request}).data)
 
 
 class LogoutView(APIView):
@@ -83,7 +83,7 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return api_response(data=UserSerializer(request.user).data)
+        return api_response(data=UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
         serializer = UserUpdateSerializer(
@@ -91,7 +91,7 @@ class MeView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return api_response(data=UserSerializer(request.user).data)
+        return api_response(data=UserSerializer(request.user, context={"request": request}).data)
 
 
 class ChangePasswordView(APIView):
