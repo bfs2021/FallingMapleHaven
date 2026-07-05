@@ -400,8 +400,8 @@ class AdminLogsView(APIView, AdminPermissionMixin):
         if action:
             logs = logs.filter(action=action)
 
-        user_id = request.query_params.get("user_id", "").strip()
-        if user_id:
+        user_id = safe_int(request.query_params.get("user_id"), None)
+        if user_id is not None:
             logs = logs.filter(user_id=user_id)
 
         logs = logs.order_by("-created_at")
