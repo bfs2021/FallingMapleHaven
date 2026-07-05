@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { notificationApi } from '@/api/notifications'
@@ -41,18 +41,7 @@ function stopPolling() {
 
 async function fetchUnreadCount() {
   try {
-    const savedScroll = window.scrollY
-    const [listRes, countRes] = await Promise.all([
-      notificationApi.list({ page: 1, page_size: 20 }),
-      notificationApi.unreadCount(),
-    ])
-    if (listRes.data?.results) {
-      notifications.value = listRes.data.results
-      page.value = 1
-      hasMore.value = listRes.data.page * listRes.data.page_size < listRes.data.total
-      await nextTick()
-      window.scrollTo(0, savedScroll)
-    }
+    const countRes = await notificationApi.unreadCount()
     authStore.setUnreadCount(countRes.data?.count || 0)
   } catch { /* ignore */ }
 }
