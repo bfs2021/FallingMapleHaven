@@ -154,7 +154,7 @@ class PostCreateView(APIView):
                 Notification(
                     recipient=m.user,
                     sender=request.user,
-                    type="group_new_post",
+                    notification_type="group_new_post",
                     title="小组新动态",
                     content=f"{request.user.nickname} 在 {post.group.name} 发布了新动态",
                     link="",

@@ -122,7 +122,7 @@ class GroupJoinView(APIView):
                 Notification.objects.create(
                     recipient=admin.user,
                     sender=request.user,
-                    type="group_join_request",
+                    notification_type="group_join_request",
                     title="加入小组申请",
                     content=f"{request.user.nickname} 申请加入 {group.name}",
                     link=f"/groups/{group.id}",
@@ -139,9 +139,9 @@ class GroupJoinView(APIView):
         other_members = GroupMember.objects.filter(group=group).exclude(user=request.user).select_related("user")
         Notification.objects.bulk_create([
             Notification(
-                recipient=m.user,
-                sender=request.user,
-                type="group_member_joined",
+                    recipient=m.user,
+                    sender=request.user,
+                    notification_type="group_member_joined",
                 title="新成员加入",
                 content=f"欢迎 {request.user.nickname} 加入 {group.name}",
                 link=f"/groups/{group.id}",
@@ -377,7 +377,7 @@ class GroupJoinRequestHandleView(APIView):
             Notification.objects.create(
                 recipient=applicant,
                 sender=request.user,
-                type="group_request_approved",
+                notification_type="group_request_approved",
                 title="加入申请已通过",
                 content=f"你的加入 {group.name} 申请已通过",
                 link=f"/groups/{group.id}",
@@ -388,7 +388,7 @@ class GroupJoinRequestHandleView(APIView):
                 Notification(
                     recipient=m.user,
                     sender=applicant,
-                    type="group_member_joined",
+                    notification_type="group_member_joined",
                     title="新成员加入",
                     content=f"欢迎 {applicant.nickname} 加入 {group.name}",
                     link=f"/groups/{group.id}",
@@ -401,7 +401,7 @@ class GroupJoinRequestHandleView(APIView):
             Notification.objects.create(
                 recipient=applicant,
                 sender=request.user,
-                type="group_request_rejected",
+                notification_type="group_request_rejected",
                 title="加入申请已拒绝",
                 content=f"你的加入 {group.name} 申请已被拒绝",
                 link="",
