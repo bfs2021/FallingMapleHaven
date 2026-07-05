@@ -296,8 +296,8 @@ class GroupTransferView(APIView):
         if not membership or request.user != group.creator:
             return api_response(code=40003, message="无权转让小组", status=status.HTTP_403_FORBIDDEN)
 
-        new_owner_id = request.data.get("new_owner_id")
-        if not new_owner_id:
+        new_owner_id = safe_int(request.data.get("new_owner_id"), None)
+        if new_owner_id is None:
             return api_response(code=40001, message="请指定新群主", status=status.HTTP_400_BAD_REQUEST)
 
         new_owner_membership = GroupMember.objects.filter(group=group, user_id=new_owner_id).first()
