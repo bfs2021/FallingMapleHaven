@@ -42,12 +42,7 @@ class RegisterView(APIView):
         user = serializer.save()
         login(request, user)
         return api_response(
-            data={
-                "user_id": user.id,
-                "username": user.username,
-                "nickname": user.nickname,
-                "avatar_url": user.avatar.url if user.avatar else None,
-            },
+            data=UserSerializer(user, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
 
