@@ -21,7 +21,7 @@ class RoomListView(APIView):
 
     def get(self, request):
         last_message = Message.objects.filter(room_id=OuterRef("id")).order_by("-created_at")
-        rooms = ChatRoom.objects.filter(members__user=request.user).prefetch_related(
+        rooms = ChatRoom.objects.filter(members__user=request.user).select_related("group").prefetch_related(
             Prefetch("members", queryset=ChatRoomMember.objects.select_related("user")),
         ).annotate(
             _last_msg_content=Subquery(last_message.values("content")[:1]),
