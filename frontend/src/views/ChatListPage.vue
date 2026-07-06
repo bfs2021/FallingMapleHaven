@@ -72,7 +72,7 @@ function enterRoom(room) {
             </span>
           </div>
           <p class="text-[13px] text-text-secondary truncate mt-0.5">
-            {{ room.last_message?.content || '暂无消息' }}
+            {{ room.last_message || '暂无消息' }}
           </p>
         </div>
       </div>
