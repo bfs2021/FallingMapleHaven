@@ -43,6 +43,20 @@ cd frontend && npm run build
 ### 顾全大局
 当编写或改动字段名称或者数据结构、类型等时，一定要作透彻的上下游搜索和验证，避免出现任何不同步的问题。
 
+### 审查清单：所有经过用户输入的 ORM 调用必须做类型校验
+```
+request.query_params.get()     →  num: safe_int(val, default) / str: val.strip()
+request.data.get()             →  int: 用 IntegerField serializer 校验 / safe_int()
+URL <int:pk> 之外的路径参数    →  同样需要 safe_int()
+filter(fk_field=raw_input)     →  必须先校验 raw_input 是有效数字
+```
+
+### 审查清单：所有 `create()` / `get_or_create()` 要考虑并发竞态
+`Model.objects.create()` 前若有 `exists()` 检查 → 必然有竞态窗口。改用 `get_or_create()` 并判断 `created` 标志。
+
+### 审查清单：ORM field name 与模型定义必须一致
+`Notification.objects.create(type="xxx")` 如果模型字段是 `notification_type` 会直接 `TypeError`。ORM create 传参前必须对照模型定义确认字段名。
+
 ### 先思考再编码
 
 实现前先明确假设，暴露取舍。如果有多个可能的方案，列出来再选，不要默默决定。不确定就问。
