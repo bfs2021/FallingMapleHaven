@@ -103,7 +103,7 @@ class AdminPostListView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        posts = Post.objects.all().order_by("-created_at")
+        posts = Post.objects.select_related("author").all().order_by("-created_at")
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         total = posts.count()
@@ -203,7 +203,7 @@ class AdminAnonymousQuestionsView(APIView, AdminPermissionMixin):
 
         from apps.plugins.questions.models import AnonymousQuestion
         from apps.plugins.questions.serializers import AdminQuestionSerializer
-        questions = AnonymousQuestion.objects.all().order_by("-created_at")
+        questions = AnonymousQuestion.objects.select_related("recipient", "sender").all().order_by("-created_at")
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         total = questions.count()
@@ -228,13 +228,21 @@ class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
             return error
 
         from apps.plugins.quizzes.models import QuizQuestion, QuizAnswer
-        questions = QuizQuestion.objects.all().select_related("creator", "target_user")
+        questions = QuizQuestion.objects.all().select_related("creator", "target_user").order_by("-created_at")
+
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = questions.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_questions = questions[start:end]
+
         answer_map = {
             a.question_id: a
-            for a in QuizAnswer.objects.filter(question_id__in=[q.id for q in questions])
+            for a in QuizAnswer.objects.filter(question_id__in=[q.id for q in page_questions])
         }
         data = []
-        for q in questions:
+        for q in page_questions:
             answer = answer_map.get(q.id)
             data.append({
                 "id": q.id,
@@ -251,7 +259,12 @@ class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
                 "is_correct": answer.is_correct if answer else None,
                 "created_at": q.created_at,
             })
-        return api_response(data=data)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": data,
+        })
 
 
 class AdminPluginListView(APIView, AdminPermissionMixin):
@@ -262,7 +275,13 @@ class AdminPluginListView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        plugins = Plugin.objects.all()
+        plugins = Plugin.objects.all().order_by("id")
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = plugins.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_plugins = plugins[start:end]
         data = [
             {
                 "id": p.id,
@@ -272,9 +291,14 @@ class AdminPluginListView(APIView, AdminPermissionMixin):
                 "config": p.config,
                 "created_at": p.created_at,
             }
-            for p in plugins
+            for p in page_plugins
         ]
-        return api_response(data=data)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": data,
+        })
 
 
 class AdminPluginUpdateView(APIView, AdminPermissionMixin):
@@ -394,7 +418,7 @@ class AdminLogsView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        logs = SiteLog.objects.all()
+        logs = SiteLog.objects.select_related("user").all()
 
         action = request.query_params.get("action", "").strip()
         if action:
@@ -522,14 +546,21 @@ class AdminGroupListView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        groups = InterestGroup.objects.annotate(member_count=Count('members'))
+        groups = InterestGroup.objects.select_related("creator").annotate(member_count=Count('members'))
         search = request.query_params.get("search", "").strip()
         if search:
             groups = groups.filter(name__icontains=search)
         groups = groups.order_by("-created_at")
 
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = groups.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_groups = groups[start:end]
+
         data = []
-        for g in groups:
+        for g in page_groups:
             data.append({
                 "id": g.id,
                 "name": g.name,
@@ -540,7 +571,12 @@ class AdminGroupListView(APIView, AdminPermissionMixin):
                 "member_count": g.member_count,
                 "created_at": g.created_at,
             })
-        return api_response(data=data)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": data,
+        })
 
 
 class AdminGroupDeleteView(APIView, AdminPermissionMixin):
