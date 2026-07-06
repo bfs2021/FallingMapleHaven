@@ -103,7 +103,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg_type=msg_type,
         )
         return {
-            "message_id": msg.id,
+            "id": msg.id,
             "room_id": msg.room_id,
             "sender_id": msg.sender_id,
             "sender_nickname": self.user.nickname,

@@ -69,7 +69,7 @@ export const useChatStore = defineStore('chat', {
           if (payload.type === 'new_message' && payload.data?.room_id) {
             const message = {
               ...payload.data,
-              id: payload.data.id || payload.data.message_id,
+              id: payload.data.id,
             }
             const rid = String(message.room_id)
             if (message.id && this.localEchoMessageIds[message.id]) {
