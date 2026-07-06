@@ -10,10 +10,11 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
     unread_count = serializers.SerializerMethodField()
     other_user = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    is_group = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
-        fields = ["id", "name", "room_type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
+        fields = ["id", "name", "room_type", "is_group", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
 
     def _cached_other_member(self, obj, request):
         cache = getattr(self, '_member_cache', {})
@@ -70,6 +71,9 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         if obj.room_type == "group" and obj.group:
             return obj.group.members.count()
         return None
+
+    def get_is_group(self, obj):
+        return obj.room_type == "group"
 
 
 class MessageSerializer(serializers.ModelSerializer):
