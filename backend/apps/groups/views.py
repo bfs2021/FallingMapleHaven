@@ -115,7 +115,15 @@ class GroupJoinView(APIView):
                     return api_response(code=40001, message="已有待处理的申请", status=status.HTTP_400_BAD_REQUEST)
                 existing_request.delete()
 
-            join_request = GroupJoinRequest.objects.create(group=group, applicant=request.user)
+            join_request, created = GroupJoinRequest.objects.get_or_create(
+                group=group, applicant=request.user,
+                defaults={"status": GroupJoinRequest.Status.PENDING},
+            )
+            if not created:
+                if join_request.status == GroupJoinRequest.Status.PENDING:
+                    return api_response(code=40001, message="已有待处理的申请", status=status.HTTP_400_BAD_REQUEST)
+                join_request.status = GroupJoinRequest.Status.PENDING
+                join_request.save()
 
             admin_members = GroupMember.objects.filter(group=group, role="admin").select_related("user")
             for admin in admin_members:
