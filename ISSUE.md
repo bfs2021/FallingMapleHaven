@@ -567,7 +567,7 @@
 
 ## 修复状态 & 待修复优先级
 
-### ✅ 已修复（14 项）
+### ✅ 已修复（19 项）
 | 编号 | 项目 | 说明 |
 |------|------|------|
 | C1 | `Notification.type=` → `notification_type=` | 7 处字段名修正 |
@@ -579,24 +579,28 @@
 | C7 | `GroupDetailPage.vue` `\|\|` | → `??` 操作符 |
 | C8 | `GroupTransferView` 类型校验 | `safe_int` 包裹 |
 | C9 | `GroupJoinView` 并发竞态 | `create` → `get_or_create` |
+| C10 | `authStore.logout()` 无 try/catch | API 失败仍清除本地状态 |
+| C11 | 注册 API 返回字段不全 | 改用完整 UserSerializer |
+| C12+C13 | `<int:user_id>` 不兼容用户名 | 改为 `<str:username_or_id>` + resolve |
 | H8+H9 | 聊天室列表 N+1 | Subquery annotation 替代 Prefetch |
 | H11 | FriendButton `requestId` prop | 新增 prop 精确指定请求 |
 | H12 | 通知轮询丢滚动 | 仅更新未读计数 |
+| H19 | WS `message_id` → `id` | 统一字段名，前端移除 fallback |
+| H20 | `unreadCounts` 未填充 | fetchRooms 写入 + WS 递增 |
 | M12 | `SelectField.vue` 监听器泄漏 | 误报 — 代码已正确 cleanup |
 | X1 | 群转让 ChatRoomMember 同步 | 转让后 `get_or_create` 成员记录 |
+| — | ChatListPage last_message | 模板 `?.content` → 字符串直接显示 |
 
 ### 📋 待修复优先级
 
-**第一阶段 — 前后端接口断裂（功能无法正常使用）**
-1. **🔴 C11** — 注册返回字段不全 → 页面数据缺失
-2. **🔴 C12/C13** — `<int:user_id>` 不兼容用户名路径 → 管理面板和插件卡片断路
-3. **🔴 C10** — `authStore.logout()` 无 try/catch → 401 后状态损坏
-4. **🟠 H19** — WS `id` vs `message_id` 不一致 → 消息 ID 解析脆弱
-5. **🟠 H20** — `unreadCounts` 未填充 → 聊天未读徽章不显示
-
-**第二阶段 — 后端稳定性与性能**
-6. **🔴 H16/H17** — 并发竞态 → IntegrityError → 500
-7. **🟠 H2-H7, H10, H13-H15** — N+1 查询和无分页
+**第二阶段 — 后端稳定性与性能（建议优先）**
+1. **🔴 H16** — `GroupJoinRequest.create()` 并发竞态 → 500
+2. **🔴 H17** — `Friendship.create()` 并发竞态 → 500
+3. **🟠 H2-H7** — admin_dashboard N+1/无分页（6 项）
+4. **🟠 H10** — chat serializer `obj.group` 无 select_related
+5. **🟠 H13** — `QuizLeaderboardView` N+1
+6. **🟠 H14** — `QuizReceivedQuestionsView` 无分页
+7. **🟠 H15** — 管理后台图标 emoji 名
 8. **🟡 M1-M4, M13-M15, M19** — SQL/N+1/异常处理优化
 
 **第三阶段 — 前后端字段名统一**
@@ -605,4 +609,5 @@
 
 **第四阶段 — 打磨**
 11. **🟡 M5-M11, M16-M18, M20-M22, M25** — UI/UX 缺陷
-12. **🔵 L1-L30** — 代码整洁性 / 文档偏差
+12. **🟡 H18** — 前端 Store Action 缺少 try/catch
+13. **🔵 L1-L30** — 代码整洁性 / 文档偏差
