@@ -47,7 +47,7 @@ async function fetchReceived() {
   loadingReceived.value = true
   try {
     const res = await quizApi.received()
-    receivedQuestions.value = res.data || []
+    receivedQuestions.value = res.data?.results || res.data || []
   } catch { /* ignore */ } finally {
     loadingReceived.value = false
   }
