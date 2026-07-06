@@ -17,6 +17,9 @@ export const useChatStore = defineStore('chat', {
     async fetchRooms() {
       const res = await chatApi.rooms()
       this.rooms = res.data || []
+      for (const room of this.rooms) {
+        this.unreadCounts[room.id] = room.unread_count || 0
+      }
     },
     async fetchMessages(roomId, page = 1) {
       const res = await chatApi.messages(roomId, page)
@@ -44,6 +47,7 @@ export const useChatStore = defineStore('chat', {
       if (!room) return
       room.last_message = message.content
       room.last_message_at = message.created_at
+      this.unreadCounts[room.id] = (this.unreadCounts[room.id] || 0) + 1
       this.rooms.sort((a, b) => {
         if (!a.last_message_at) return 1
         if (!b.last_message_at) return -1
