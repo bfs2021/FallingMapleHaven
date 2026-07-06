@@ -17,7 +17,7 @@ const accuracy = computed(() => {
 onMounted(async () => {
   try {
     const res = await adminApi.quizQuestions()
-    questions.value = res.data || []
+    questions.value = res.data?.results || []
   } catch { /* ignore */ } finally {
     loading.value = false
   }
