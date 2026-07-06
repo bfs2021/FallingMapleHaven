@@ -297,12 +297,12 @@ class GuestbookDeleteView(APIView):
 class ProfileAdminView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, user_id):
+    def get(self, request, username_or_id):
         if not request.user.is_staff:
             return api_response(code=40003, message="无权访问", data=None, status=status.HTTP_403_FORBIDDEN)
         try:
-            target = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            target = resolve_profile_user(username_or_id)
+        except (User.DoesNotExist, ValueError):
             return api_response(code=40004, message="用户不存在", data=None, status=status.HTTP_404_NOT_FOUND)
         return api_response(data={
             "user_id": target.id,
@@ -317,12 +317,12 @@ class ProfileAdminView(APIView):
             "bio": target.bio,
         })
 
-    def patch(self, request, user_id):
+    def patch(self, request, username_or_id):
         if not request.user.is_staff:
             return api_response(code=40003, message="无权访问", data=None, status=status.HTTP_403_FORBIDDEN)
         try:
-            target = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            target = resolve_profile_user(username_or_id)
+        except (User.DoesNotExist, ValueError):
             return api_response(code=40004, message="用户不存在", data=None, status=status.HTTP_404_NOT_FOUND)
 
         allowed_fields = {"is_active"}

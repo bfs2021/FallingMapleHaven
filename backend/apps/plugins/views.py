@@ -1,6 +1,7 @@
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from apps.accounts.models import User
 from apps.plugins.registry import PluginRegistry
 
 
@@ -40,12 +41,22 @@ class PluginSummaryView(APIView):
 class ProfilePluginCardsView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, user_id):
+    def get(self, request, username_or_id):
+        from apps.accounts.models import User
         from apps.plugins.registry import PluginRegistry
         from apps.plugins.models import Plugin as PluginModel
         from apps.profiles.models import GuestbookEntry
 
+        try:
+            try:
+                user = User.objects.get(pk=username_or_id)
+            except (User.DoesNotExist, ValueError):
+                user = User.objects.get(username=username_or_id)
+        except User.DoesNotExist:
+            return Response({"code": 4004, "message": "用户不存在", "data": None}, status=404)
+
         viewer_id = request.user.id if request.user.is_authenticated else None
+        user_id = user.id
 
         active_types = set(
             PluginModel.objects.filter(is_active=True).values_list("plugin_type", flat=True)
