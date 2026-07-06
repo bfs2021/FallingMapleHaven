@@ -58,9 +58,17 @@ class FriendRequestView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        Friendship.objects.create(
-            from_user=request.user, to_user_id=to_user_id, status=Friendship.Status.PENDING
+        friendship, created = Friendship.objects.get_or_create(
+            from_user=request.user, to_user_id=to_user_id,
+            defaults={"status": Friendship.Status.PENDING},
         )
+        if not created:
+            if friendship.status == Friendship.Status.ACCEPTED:
+                return api_response(code=40001, message="已是好友", data=None, status=status.HTTP_400_BAD_REQUEST)
+            if friendship.status == Friendship.Status.PENDING:
+                return api_response(code=40001, message="已发送过好友申请", data=None, status=status.HTTP_400_BAD_REQUEST)
+            friendship.status = Friendship.Status.PENDING
+            friendship.save()
         return api_response(message="好友申请已发送", status=status.HTTP_201_CREATED)
 
 
