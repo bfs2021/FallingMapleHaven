@@ -58,6 +58,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 profile.visitor_public = visitor_public
                 update_fields.append("visitor_public")
             profile.save(update_fields=update_fields)
+            instance.refresh_from_db()
         return instance
 
 

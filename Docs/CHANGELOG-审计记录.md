@@ -75,9 +75,53 @@
 
 ---
 
-## 2026-07-04 — ISSUE.md 全栈审计
+## 2026-07-06 — ISSUE.md 全栈 + 连通性联合审计
 
-来源：`ISSUE.md`，共 66 项（C7/H23/M21/L15），以下为已完全修复项：
+来源：`ISSUE.md` 新版，共 86 项（C13/H20/M26/L27），覆盖后端 9 App + 前端 28 View + 20 Component + 4 Store + 9 API 模块 + Docs/01~08
+
+### ✅ 已完全修复（17 项 + 2 误报）
+
+| 编号 | 项目 | 说明 |
+|------|------|------|
+| C1 | `Notification.type=` → `notification_type=` | 7 处字段名修正 |
+| C2 | `ALLOWED_HOSTS` 默认值 | `prod.py` 删 `default=[]` |
+| C4 | WebSocket Origin 校验 | 加 `origin is None` 拒绝分支 |
+| C5 | `VisitRecord` 唯一约束 | UniqueConstraint + 迁移去重 |
+| C6 | `AdminLogsView` 类型校验 | `safe_int` 包裹 |
+| C7 | `GroupDetailPage.vue` `\|\|` → `??` | 空数组 `[]` falsy 修复 |
+| C8 | `GroupTransferView` 类型校验 | `safe_int` 包裹 + 修复 ChatRoomMember 同步（X1） |
+| C9 | `GroupJoinView` 并发竞态 | `create` → `get_or_create` |
+| C10 | `authStore.logout()` 无 try/catch | API 失败仍清除本地状态 |
+| C11 | 注册 API 返回字段不全 | 改用完整 UserSerializer |
+| C12+C13 | `<int:user_id>` 不兼容用户名 | 改为 `<str:username_or_id>` + resolve_profile_user |
+| H8+H9 | 聊天室列表 N+1 | Subquery annotation 替代 Prefetch |
+| H11 | FriendButton `requestId` prop | 新增 prop 精确指定请求 |
+| H12 | 通知轮询丢滚动 | 仅更新未读计数 |
+| H19 | WS `message_id` → `id` | 统一字段名，前端移除 fallback |
+| H20 | `unreadCounts` 未填充 | fetchRooms 写入 + WS 递增 |
+| X1 | 群转让 ChatRoomMember 不同步 | 转让后 `get_or_create` 成员记录 |
+| — | ChatListPage last_message | 模板 `?.content` → 字符串直接显示 |
+
+**误报排除（⏭️）：**
+| 编号 | 说明 | 原因 |
+|------|------|------|
+| C3 | `answer_map` 死代码 | line 238 实际使用 |
+| M12 | `SelectField.vue` 监听器泄漏 | 代码已正确 cleanup |
+
+### 📋 待处理（70 项）
+
+| 区间 | 待修复 | 说明 |
+|------|--------|------|
+| 🔴 Critical | 0 | 全部修复 |
+| 🟠 High | 14 | 并发竞态 H16/H17、admin N+1/无分页 H2-H7、chat N+1 H10、Quiz N+1 H13/H14、图标名 H15、缺少 try/catch H18 |
+| 🟡 Medium | 25 | N+1/Serialzier 优化 M1-M4、UI/UX M5-M11、分页 M13-M15、连通性 M17/M19/M23-M26、并发 M20、测试 M21、字段名 M24 |
+| 🔵 Low | 27 | 代码整洁 L1-L20、文档偏差 L21-L23、字段名不一 L24-L26、WS 未使用 L27、API 风格 L28、竞态 L29-L30 |
+
+---
+
+## 2026-07-04 — ISSUE.md 首次全栈审计（旧版 66 项）
+
+来源：`ISSUE.md` 旧版，该版本已由 2026-07-06 新版替代。以下为旧版归档：
 
 ### 🔴 Critical（7/7 已修复）
 - C1 文件上传用 FormData
@@ -105,25 +149,25 @@
 - H17 RoomMessagesView N+1
 - H18 GuestbookListView N+1
 - H19 AdminQuizQuestionsView N+1
-- H3 管理后台分页（5/7 视图已修复，AdminGroupListView + AdminQuizQuestionsView 待修复）
-- H4 聊天室列表序列化器 N+1（主要修复，2 处小残留）
+- H3 管理后台分页（5/7 视图已修，AdminGroupListView + AdminQuizQuestionsView 待修）
+- H4 聊天室列表 N+1（主要修复，2 处残留）
 
 ### 🟡 Medium（13/21 已修复）
 - M1 ImageField 替换 FileField（groups cover 待修）
 - M2 PIL verify 不充分
-- M3 批量通知逐条 create → bulk_create
-- M4 WebSocket 消息静默截断
-- M7 默认密钥不安全
+- M3 批量通知 bulk_create
+- M4 WebSocket 截断
+- M7 默认密钥安全
 - M9 路由守卫 Session
 - M10 PostDetailView 小组可见性
 - M11 FriendButton prop 类型
 - M12 ensureSession 永久挂起
-- M14 fetchNotifications 回退不安全
-- M16 needsTruncation 非计算属性
+- M14 fetchNotifications 回退
+- M16 needsTruncation 计算属性
 - M17 WebSocket 来源验证
-- M18 匿名提问分页（随 C7 修复）
-- M6 通知 HTML 过滤（部分修复：content 未 strip_tags）
-- M8 `type` 字段遮蔽内置（2 处遗漏）
+- M18 匿名提问分页
+- M6 通知 HTML 过滤（部分修复）
+- M8 `type` 字段遮蔽（2 处遗漏）
 - M13 通知轮询滚动位置（选择器不匹配）
 
 ### 🔵 Low（0/15 已修复）

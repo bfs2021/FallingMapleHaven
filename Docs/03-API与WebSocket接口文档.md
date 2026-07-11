@@ -1,6 +1,6 @@
 # API 与 WebSocket 接口文档 — FallingMapleHaven
 
-> 版本: v1.1（2026-06-30 按代码对齐）  
+> 版本: v1.3（2026-07-09 按代码修正字段/取值）  
 > 面向读者: 全栈开发  
 > 基础路径: `/api/v1`
 
@@ -69,19 +69,7 @@ POST /api/v1/auth/register/
 
 **密码校验规则:** 最少8位，必须包含字母、数字和至少一个特殊字符 `!@#$%^&*()_+-=[]{}|;':",./<>?~\``
 
-**响应:**
-```json
-{
-    "code": 0,
-    "message": "success",
-    "data": {
-        "user_id": 1,
-        "username": "testuser",
-        "nickname": "测试用户",
-        "avatar_url": null
-    }
-}
-```
+**响应:** 同 `GET /api/v1/auth/me/` 返回格式，包含完整的 `UserSerializer` 字段。
 
 ### 2.2 登录
 
@@ -127,13 +115,13 @@ GET /api/v1/auth/me/
         "email": "",
         "real_name": "张三",
         "show_real_name": false,
+        "visitor_public": true,
+        "date_joined": "2026-01-01T00:00:00Z",
         "is_admin": false,
         "unread_count": 3
     }
 }
 ```
-
-
 
 ### 2.5 更新个人信息
 
@@ -148,7 +136,8 @@ PATCH /api/v1/auth/me/
     "bio": "新签名",
     "email": "user@example.com",
     "real_name": "张三",
-    "show_real_name": true
+    "show_real_name": true,
+    "visitor_public": false
 }
 ```
 
@@ -240,30 +229,31 @@ GET /api/v1/profiles/{username_or_id}/
 }
 ```
 
-> 用户数据**扁平化**在 `data` 顶层（无 `user` 嵌套对象）。`plugins` 通过 `PluginRegistry.get_profile_plugins()` 实时返回已启用插件的数据。
+> 用户数据**扁平化**在 `data` 顶层（无 `user` 嵌套对象）。`plugins` 通过 `PluginRegistry.get_profile_plugins()` 实时返回已启用插件的数据。  
+> `friend_status` 取值：`self`（本人）/ `accepted`（好友）/ `none`（无关系）/ `pending_sent`（已发送申请）/ `pending_received`（收到申请）。
 
 ### 3.2 管理员查看/编辑用户主页
 
 ```
-GET/PATCH /api/v1/profiles/{user_id}/admin/
+GET/PATCH /api/v1/profiles/{username_or_id}/admin/
 ```
 
-> 仅管理员可访问。路径参数为整数用户 ID（不支持用户名）。GET 返回用户 Profile 完整信息，PATCH 更新配置字段。
+> 仅管理员可访问。路径参数支持用户名（字符串）或用户 ID（数字）。GET 返回用户 Profile 完整信息，PATCH 更新配置字段。
 
 ### 3.3 获取用户的动态列表
 
 ```
-GET /api/v1/profiles/{user_id}/posts/
+GET /api/v1/profiles/{username_or_id}/posts/
 ```
 
 **参数:** `?page=1&page_size=10`
 
 **响应:** 分页的动态列表
 
-### 3.3 获取访客足迹
+### 3.4 获取访客足迹
 
 ```
-GET /api/v1/profiles/{user_id}/visitors/
+GET /api/v1/profiles/{username_or_id}/visitors/
 ```
 
 **参数:** `?page=1&page_size=20`
@@ -294,11 +284,11 @@ GET /api/v1/profiles/{user_id}/visitors/
 
 > 分页字段使用 `total` 而非 `count`，且包含 `page` 和 `page_size`。访客字段名为 `user_id`/`avatar_url`。
 
-### 3.4 留言板
+### 3.5 留言板
 
 **获取留言列表:**
 ```
-GET /api/v1/profiles/{user_id}/guestbook/
+GET /api/v1/profiles/{username_or_id}/guestbook/
 ```
 
 **参数:** `?page=1&page_size=20`
@@ -333,7 +323,7 @@ GET /api/v1/profiles/{user_id}/guestbook/
 
 **发表留言:**
 ```
-POST /api/v1/profiles/{user_id}/guestbook/create/
+POST /api/v1/profiles/{username_or_id}/guestbook/create/
 ```
 ```json
 {
@@ -382,7 +372,8 @@ POST /api/v1/friends/handle/
 **请求体:**
 ```json
 {
-    "request_id": 1,
+    "request_id": 1,          // 与 from_user_id 二选一
+    "from_user_id": 2,        // 选填，通过对方用户ID处理（与 request_id 二选一）
     "action": "accept"        // accept / reject
 }
 ```
@@ -434,6 +425,7 @@ content: "今天的夕阳好美"
 visibility: "public"       // public / friends / private
 topic_tag: "分享"          // 话题标签
 group_id: 1                // 选填，发到指定兴趣小组
+sync_to_profile: false     // 选填，是否同步到个人主页时间线，默认 false
 images: [File, File, ...]  // 最多9张
 files: [File, File, ...]   // 可选
 ```
@@ -517,16 +509,27 @@ GET /api/v1/chat/rooms/
     "code": 0,
     "data": [
         {
-            "room_id": 1,
+            "id": 1,
             "name": "张三",
-            "type": "private",
+            "room_type": "private",
+            "is_group": false,
             "last_message": "好的明天见",
             "last_message_at": "2026-06-22T14:30:00Z",
-            "unread_count": 2
+            "unread_count": 2,
+            "other_user": {
+                "user_id": 2,
+                "nickname": "张三",
+                "avatar_url": "/media/avatars/2.jpg"
+            },
+            "member_count": null
         }
     ]
 }
 ```
+
+> `other_user` 仅私聊房间返回非 null，包含对方的 `user_id`、`nickname`、`avatar_url`。
+> `member_count` 仅群聊房间返回非 null，为群成员总数。
+> `is_group` = `true` 表示群聊房间。
 
 ### 6.2 获取房间消息历史
 
@@ -704,11 +707,177 @@ PATCH /api/v1/groups/{group_id}/update/
 GET /api/v1/groups/{group_id}/posts/
 ```
 
+### 8.9 解散小组 (组长/管理员)
+
+```
+POST /api/v1/groups/{group_id}/delete/
+```
+
+> 仅组长或管理员可操作。解散后自动删除关联聊天室、动态中的小组关联。
+
+### 8.10 转让组长 (组长)
+
+```
+POST /api/v1/groups/{group_id}/transfer/
+```
+
+**请求体:**
+```json
+{
+    "new_owner_id": 2
+}
+```
+
+> 仅组长可操作。将小组组长转让给另一名成员。
+
+### 8.11 查看加入申请 (组长/管理员)
+
+```
+GET /api/v1/groups/{group_id}/join-requests/
+```
+
+> 返回待处理的加入申请列表，仅组长或管理员可查看。
+
+### 8.12 处理加入申请 (组长/管理员)
+
+```
+POST /api/v1/groups/{group_id}/join-requests/{request_id}/handle/
+```
+
+**请求体:**
+```json
+{
+    "action": "approved"      // approved / rejected
+}
+```
+
+> 仅组长或管理员可操作。`approved` 通过申请并将用户加入小组，`rejected` 拒绝申请。
+
 ---
 
 ## 9. 互动插件 API
 
+> 通用响应格式：所有插件端点统一返回 `{"code": 0, "message": "success", "data": ...}`。
+
 ### 9.1 默契问答
+
+> 出题只能向好友进行，目标必须是自己的好友（双向 accepted）。
+
+**给好友出题:**
+```
+POST /api/v1/plugins/quiz/questions/
+```
+```json
+// Request
+{
+    "target_user_id": 2,
+    "question": "我最喜欢的颜色是？",
+    "correct_answer": "蓝色"
+}
+```
+```json
+// Response 201
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "id": 1,
+        "from_user": {
+            "user_id": 1,
+            "nickname": "张三",
+            "avatar_url": null
+        },
+        "target_user": 2,
+        "question": "我最喜欢的颜色是？",
+        "created_at": "2026-07-09T12:00:00Z",
+        "has_answered": false
+    }
+}
+```
+
+**获取我收到的题目:**
+```
+GET /api/v1/plugins/quiz/questions/received/
+```
+**参数:** `?answered=true|false` 可选，默认 `false`（未回答）。`true` 返回已答题目。
+
+```json
+// Response 200
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "total": 3,
+        "page": 1,
+        "page_size": 20,
+        "results": [
+            {
+                "id": 1,
+                "from_user": { "user_id": 2, "nickname": "李四", "avatar_url": null },
+                "target_user": 1,
+                "question": "我最喜欢的颜色是？",
+                "created_at": "2026-07-09T12:00:00Z",
+                "has_answered": false
+            }
+        ]
+    }
+}
+```
+
+**答题:**
+```
+POST /api/v1/plugins/quiz/questions/{question_id}/answer/
+```
+```json
+// Request
+{
+    "answer": "红色"
+}
+```
+```json
+// Response 201
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "is_correct": false,
+        "correct_answer": "蓝色",
+        "match_score": 80.0
+    }
+}
+```
+
+**获取我与某好友的匹配度:**
+```
+GET /api/v1/plugins/quiz/result/{friend_user_id}/
+```
+```json
+// Response 200
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "friend_id": 2,
+        "total_questions": 5,
+        "correct_count": 4,
+        "match_score": 80.0,
+        "updated_at": "2026-07-09T12:05:00Z"
+    }
+}
+```
+
+**删除题目:**
+```
+DELETE /api/v1/plugins/quiz/questions/{question_id}/delete/
+```
+```json
+// Response 200
+{
+    "code": 0,
+    "message": "success",
+    "data": null
+}
+```
 
 **好友排行榜:**
 ```
@@ -717,6 +886,7 @@ GET /api/v1/plugins/quiz/leaderboard/
 返回当前用户与所有好友的匹配度排名，按匹配度降序、答题数降序排列。
 
 ```json
+// Response 200
 {
     "code": 0,
     "data": {
@@ -730,82 +900,95 @@ GET /api/v1/plugins/quiz/leaderboard/
 }
 ```
 
-**给好友出题:**
-```
-POST /api/v1/plugins/quiz/questions/
-```
-```json
-{
-    "target_user_id": 2,
-    "question": "我最喜欢的颜色是？",
-    "correct_answer": "蓝色"
-}
-```
-
-**获取我收到的题目:**
-```
-GET /api/v1/plugins/quiz/questions/received/
-```
-
-**答题:**
-```
-POST /api/v1/plugins/quiz/questions/{question_id}/answer/
-```
-```json
-{
-    "answer": "红色"
-}
-```
-
-**获取我与某好友的匹配度:**
-```
-GET /api/v1/plugins/quiz/result/{friend_user_id}/
-```
-
-**删除题目:**
-```
-DELETE /api/v1/plugins/quiz/questions/{question_id}/delete/
-```
-
-### 9.1.1 收到的题目支持筛选
-
-```
-GET /api/v1/plugins/quiz/questions/received/?answered=true
-```
-
 ### 9.2 匿名提问箱
+
+**发起提问（向他人匿名提问）:**
 ```
 POST /api/v1/plugins/question-box/
 ```
 ```json
+// Request
 {
     "recipient_id": 1,
     "content": "你最近在看什么书？",
-    "is_public": true      // 选填，默认 true
+    "is_public": true
+}
+```
+`is_public` 选填，默认 `true`。
+
+```json
+// Response 201
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "id": 1
+    }
 }
 ```
 
-**获取我的提问箱(他人向我提问):**
+**获取我的提问箱（他人向我提问）:**
 ```
 GET /api/v1/plugins/question-box/inbox/
 ```
+**参数:** `?answered=true|false` 可选，筛选已回答/未回答的提问。
 
-**参数:** `?answered=true` 可选，筛选已回答/未回答的提问。
+```json
+// Response 200
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "total": 2,
+        "page": 1,
+        "page_size": 20,
+        "results": [
+            {
+                "id": 1,
+                "content": "你最近在看什么书？",
+                "answer": null,
+                "is_answered": false,
+                "is_public": true,
+                "created_at": "2026-07-09T12:00:00Z",
+                "answered_at": null
+            }
+        ]
+    }
+}
+```
+> 提问者信息不暴露 —— `sender` 字段不返回，实现匿名。
 
 **回答提问:**
 ```
 POST /api/v1/plugins/question-box/{question_id}/answer/
 ```
 ```json
+// Request
 {
     "answer": "最近在看《百年孤独》"
 }
 ```
+```json
+// Response 200
+{
+    "code": 0,
+    "message": "success"
+}
+```
+> 仅收件人（recipient）可以回答。
 
 **删除提问:**
 ```
 DELETE /api/v1/plugins/question-box/{question_id}/delete/
 ```
+```json
+// Response 200
+{
+    "code": 0,
+    "message": "success"
+}
+```
+> 仅收件人（recipient）可以删除自己收到的提问。
 
 ### 9.3 插件摘要
 
@@ -855,7 +1038,7 @@ GET /api/v1/plugins/summary/
 返回某用户主页的插件卡片数据（含访客视角动态数据，如 A 看 B 主页时显示 A 与 B 的匹配度）。
 
 ```
-GET /api/v1/plugins/profile-cards/{user_id}/
+GET /api/v1/plugins/profile-cards/{username_or_id}/
 ```
 
 ```json
@@ -898,7 +1081,7 @@ GET /api/v1/notifications/
 
 **参数:** `?page=1&page_size=20&unread_only=true`
 
-当前通知类型与代码 `Notification.Type` 保持一致：`system`、`friend_request`、`friend_accepted`、`comment`、`like`、`reply`、`quiz_invite`、`anonymous_question`。当前没有 `message` 通知类型。
+当前通知类型与代码 `Notification.Type` 保持一致：`system`、`friend_request`、`friend_accepted`、`comment`、`like`、`reply`、`quiz_invite`、`anonymous_question`、`group_join_request`、`group_request_approved`、`group_request_rejected`、`group_member_joined`、`group_new_post`。
 
 ### 10.2 标记已读
 
@@ -943,12 +1126,35 @@ GET /api/v1/admin/quiz/questions/              # 问答管理（所有题目+作
 > 匿名提问追溯接口返回数据包含 `real_sender` 字段，前端入口为 `/admin/anonymous-questions`。
 > 问答管理接口返回数据包含题目、出题人、目标人、已答状态、是否正确等信息，前端入口为 `/admin/quiz`。
 
+**群组管理:**
+```
+GET /api/v1/admin/groups/                        # 小组列表（支持 ?search=关键词，分页返回）
+DELETE /api/v1/admin/groups/{group_id}/           # 删除小组（同时清理关联聊天室和动态）
+GET /api/v1/admin/groups/{group_id}/posts/        # 查看小组内所有动态
+```
+
+> 群组管理接口返回数据包含 `id`、`name`、`description`、`cover_url`、`is_public`、`creator_name`、`member_count`、`created_at`。
+> 群组动态接口返回 `id`、`author_name`、`content`、`created_at`。
+
 ### 11.3 站点设置
 
 ```
 GET /api/v1/admin/settings/                   # 获取所有设置
 PATCH /api/v1/admin/settings/                  # 更新设置
 ```
+
+**可用配置键:**
+| 键 | 类型 | 说明 |
+|------|------|------|
+| `allow_register` | boolean | 是否允许新用户注册 |
+| `site_notice` | string | 站点公告内容 |
+| `site_name` | string | 网站名称，默认 `FallingMapleHaven` |
+| `site_logo` | string | Logo URL 路径 |
+| `site_favicon` | string | Favicon URL 路径 |
+| `max_file_size` | int | 最大文件上传大小(MB) |
+| `allowed_extensions` | string | 允许上传的文件扩展名，逗号分隔 |
+
+> `PATCH` 请求体格式: `{ "settings": { "allow_register": false, "site_notice": "维护中" } }`
 
 ### 11.4 插件管理
 

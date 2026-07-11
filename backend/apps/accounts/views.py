@@ -85,8 +85,8 @@ class MeView(APIView):
             request.user, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return api_response(data=UserSerializer(request.user, context={"request": request}).data)
+        user = serializer.save()
+        return api_response(data=UserSerializer(user, context={"request": request}).data)
 
 
 class ChangePasswordView(APIView):
