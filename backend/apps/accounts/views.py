@@ -42,12 +42,7 @@ class RegisterView(APIView):
         user = serializer.save()
         login(request, user)
         return api_response(
-            data={
-                "user_id": user.id,
-                "username": user.username,
-                "nickname": user.nickname,
-                "avatar_url": user.avatar.url if user.avatar else None,
-            },
+            data=UserSerializer(user, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -68,7 +63,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         login(request, user)
-        return api_response(data=UserSerializer(user).data)
+        return api_response(data=UserSerializer(user, context={"request": request}).data)
 
 
 class LogoutView(APIView):
@@ -83,15 +78,15 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return api_response(data=UserSerializer(request.user).data)
+        return api_response(data=UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
         serializer = UserUpdateSerializer(
             request.user, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return api_response(data=UserSerializer(request.user).data)
+        user = serializer.save()
+        return api_response(data=UserSerializer(user, context={"request": request}).data)
 
 
 class ChangePasswordView(APIView):
@@ -178,6 +173,9 @@ class AvatarUploadView(APIView):
             img = Image.open(file)
             img.verify()
             file.seek(0)
+            img = Image.open(file)
+            img.load()
+            file.seek(0)
         except Exception:
             return api_response(
                 code=40001,
@@ -219,6 +217,9 @@ class CoverUploadView(APIView):
         try:
             img = Image.open(file)
             img.verify()
+            file.seek(0)
+            img = Image.open(file)
+            img.load()
             file.seek(0)
         except Exception:
             return api_response(

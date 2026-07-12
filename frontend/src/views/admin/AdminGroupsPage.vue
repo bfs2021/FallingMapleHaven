@@ -29,7 +29,7 @@ async function fetchGroups() {
   error.value = ''
   try {
     const res = await adminApi.groups()
-    groups.value = res.data || []
+    groups.value = res.data?.results || []
   } catch {
     error.value = '群组列表加载失败'
   } finally {

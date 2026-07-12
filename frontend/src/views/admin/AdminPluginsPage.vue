@@ -13,7 +13,7 @@ async function fetchPlugins() {
   error.value = ''
   try {
     const res = await adminApi.plugins()
-    plugins.value = res.data || []
+    plugins.value = res.data?.results || []
   } catch {
     error.value = '插件列表加载失败'
   } finally {

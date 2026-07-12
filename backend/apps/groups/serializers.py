@@ -28,7 +28,9 @@ class GroupListSerializer(serializers.ModelSerializer):
     def get_is_member(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
-            return obj.members.filter(user_id=request.user.id).exists()
+            for m in obj.members.all():
+                if m.user_id == request.user.id:
+                    return True
         return False
 
     def get_cover_url(self, obj):
@@ -53,7 +55,9 @@ class GroupDetailSerializer(serializers.ModelSerializer):
     def get_is_member(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
-            return obj.members.filter(user_id=request.user.id).exists()
+            for m in obj.members.all():
+                if m.user_id == request.user.id:
+                    return True
         return False
 
     def get_owner(self, obj):

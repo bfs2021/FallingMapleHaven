@@ -10,41 +10,55 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
     unread_count = serializers.SerializerMethodField()
     other_user = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    is_group = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
-        fields = ["id", "name", "type", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
+        fields = ["id", "name", "room_type", "is_group", "last_message", "last_message_at", "unread_count", "other_user", "member_count"]
+
+    def _cached_other_member(self, obj, request):
+        cache = getattr(self, '_member_cache', {})
+        if obj.id not in cache:
+            other = None
+            for m in obj.members.all():
+                if m.user_id != request.user.id:
+                    other = m
+                    break
+            cache[obj.id] = other
+            self._member_cache = cache
+        return cache[obj.id]
 
     def get_name(self, obj):
         request = self.context.get("request")
-        if obj.type == "private" and request:
-            other = obj.members.exclude(user_id=request.user.id).first()
+        if obj.room_type == "private" and request:
+            other = self._cached_other_member(obj, request)
             return other.user.nickname if other else "已解散"
         return obj.name
 
     def get_last_message(self, obj):
-        msg = obj.messages.order_by("-created_at").first()
-        return msg.content if msg else None
+        return getattr(obj, '_last_msg_content', None)
 
     def get_last_message_at(self, obj):
-        msg = obj.messages.order_by("-created_at").first()
-        return msg.created_at if msg else None
+        return getattr(obj, '_last_msg_at', None)
 
     def get_unread_count(self, obj):
         request = self.context.get("request")
         if not request:
             return 0
-        try:
-            member = obj.members.get(user_id=request.user.id)
+        member = None
+        for m in obj.members.all():
+            if m.user_id == request.user.id:
+                member = m
+                break
+        if member:
             last_read = member.last_read_at or member.joined_at
             return obj.messages.filter(created_at__gt=last_read).exclude(sender=request.user).count()
-        except ChatRoomMember.DoesNotExist:
-            return 0
+        return 0
 
     def get_other_user(self, obj):
         request = self.context.get("request")
-        if obj.type == "private" and request:
-            other = obj.members.exclude(user_id=request.user.id).first()
+        if obj.room_type == "private" and request:
+            other = self._cached_other_member(obj, request)
             if other:
                 return {
                     "user_id": other.user.id,
@@ -54,9 +68,12 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         return None
 
     def get_member_count(self, obj):
-        if obj.type == "group" and obj.group:
+        if obj.room_type == "group" and obj.group:
             return obj.group.members.count()
         return None
+
+    def get_is_group(self, obj):
+        return obj.room_type == "group"
 
 
 class MessageSerializer(serializers.ModelSerializer):

@@ -48,7 +48,6 @@ function handleScroll() {
   const scrollBottom = window.innerHeight + window.scrollY
   const threshold = document.documentElement.scrollHeight - 200
   if (scrollBottom >= threshold) {
-    feedStore.currentPage++
     feedStore.fetchPosts(tagParams.value)
   }
 }

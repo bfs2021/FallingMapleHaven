@@ -41,15 +41,7 @@ function stopPolling() {
 
 async function fetchUnreadCount() {
   try {
-    const [listRes, countRes] = await Promise.all([
-      notificationApi.list({ page: 1, page_size: 20 }),
-      notificationApi.unreadCount(),
-    ])
-    if (listRes.data?.results) {
-      notifications.value = listRes.data.results
-      page.value = 1
-      hasMore.value = listRes.data.page * listRes.data.page_size < listRes.data.total
-    }
+    const countRes = await notificationApi.unreadCount()
     authStore.setUnreadCount(countRes.data?.count || 0)
   } catch { /* ignore */ }
 }
@@ -60,7 +52,8 @@ async function fetchNotifications(reset = false) {
   try {
     if (reset) page.value = 1
     const res = await notificationApi.list({ page: page.value, page_size: 20 })
-    const results = res.data?.results || res.data || []
+    const raw = res.data?.results ?? res.data
+    const results = Array.isArray(raw) ? raw : []
     if (reset) {
       notifications.value = results
     } else {
@@ -150,7 +143,7 @@ function notificationIcon(type) {
           class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
           :class="n.is_read ? 'bg-maple-100/50' : 'bg-maple-100'"
         >
-          <Icon :name="notificationIcon(n.type)" :size="18" :class="n.is_read ? 'text-maple-400' : 'text-maple-600'" />
+          <Icon :name="notificationIcon(n.notification_type)" :size="18" :class="n.is_read ? 'text-maple-400' : 'text-maple-600'" />
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm" :class="n.is_read ? 'text-text-secondary' : 'text-text-primary font-semibold'">

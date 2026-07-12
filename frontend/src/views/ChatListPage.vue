@@ -63,16 +63,16 @@ function enterRoom(room) {
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-1.5 min-w-0">
               <span class="text-sm font-medium text-text-primary truncate">
-                {{ room.type === 'group' ? `${room.name} (${room.member_count})` : (room.other_user?.nickname || room.name) }}
+                {{ room.room_type === 'group' ? `${room.name} (${room.member_count})` : (room.other_user?.nickname || room.name) }}
               </span>
-              <span v-if="room.type === 'group'" class="flex-shrink-0 bg-maple-100 text-maple-700 text-[10px] px-1.5 py-0.5 rounded-full">群组</span>
+              <span v-if="room.room_type === 'group'" class="flex-shrink-0 bg-maple-100 text-maple-700 text-[10px] px-1.5 py-0.5 rounded-full">群组</span>
             </div>
             <span v-if="room.last_message_at" class="text-[11px] text-text-secondary flex-shrink-0">
               {{ relativeTime(room.last_message_at) }}
             </span>
           </div>
           <p class="text-[13px] text-text-secondary truncate mt-0.5">
-            {{ room.last_message?.content || '暂无消息' }}
+            {{ room.last_message || '暂无消息' }}
           </p>
         </div>
       </div>

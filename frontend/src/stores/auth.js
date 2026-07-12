@@ -37,14 +37,21 @@ export const useAuthStore = defineStore('auth', {
     async ensureSession() {
       if (this.initialized) return
       if (!sessionInitPromise) {
-        sessionInitPromise = this.fetchMe().finally(() => {
-          sessionInitPromise = null
-        })
+        sessionInitPromise = this.fetchMe()
       }
-      await sessionInitPromise
+      try {
+        await sessionInitPromise
+      } catch {
+      } finally {
+        sessionInitPromise = null
+      }
     },
     async logout() {
-      await authApi.logout()
+      try {
+        await authApi.logout()
+      } catch {
+        // 即使 API 调用失败也清除本地状态，避免 401 死循环
+      }
       this.user = null
       this.initialized = true
     },

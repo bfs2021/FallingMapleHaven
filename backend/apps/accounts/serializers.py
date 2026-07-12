@@ -58,6 +58,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 profile.visitor_public = visitor_public
                 update_fields.append("visitor_public")
             profile.save(update_fields=update_fields)
+            instance.refresh_from_db()
         return instance
 
 
@@ -104,5 +105,8 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.is_staff or obj.is_superuser
 
     def get_unread_count(self, obj):
-        from apps.notifications.models import Notification
-        return Notification.objects.filter(recipient=obj, is_read=False).count()
+        request = self.context.get("request")
+        if request and request.user.is_authenticated and obj.id == request.user.id:
+            from apps.notifications.models import Notification
+            return Notification.objects.filter(recipient=obj, is_read=False).count()
+        return 0

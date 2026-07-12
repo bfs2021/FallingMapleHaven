@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.utils import safe_int
 from apps.notifications.models import Notification
 from apps.plugins.utils import ensure_plugin_active
 from .models import QuizQuestion, QuizAnswer, QuizResult
@@ -35,7 +36,7 @@ class QuizQuestionCreateView(APIView):
         Notification.objects.create(
             recipient_id=serializer.validated_data["target_user_id"],
             sender=request.user,
-            type=Notification.Type.QUIZ_INVITE,
+            notification_type=Notification.Type.QUIZ_INVITE,
             title="默契问答邀请",
             content=f"{request.user.nickname} 向你出了一道题",
             link=f"/profile/{question.target_user_id}/plugins/quiz",
@@ -61,8 +62,20 @@ class QuizReceivedQuestionsView(APIView):
         else:
             questions = questions.filter(answer__isnull=False)
         questions = questions.order_by("-created_at")
-        serializer = QuizQuestionSerializer(questions, many=True)
-        return Response({"code": 0, "message": "success", "data": serializer.data})
+
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = safe_int(request.query_params.get("page_size"), 20)
+        total = questions.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_questions = questions[start:end]
+        serializer = QuizQuestionSerializer(page_questions, many=True)
+        return Response({"code": 0, "message": "success", "data": {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        }})
 
 
 class QuizAnswerView(APIView):
@@ -205,17 +218,17 @@ class QuizLeaderboardView(APIView):
         from django.db.models import Q
 
         friends = Friendship.objects.filter(
-            Q(sender=request.user, status="accepted") |
-            Q(receiver=request.user, status="accepted")
+            Q(from_user=request.user, status="accepted") |
+            Q(to_user=request.user, status="accepted")
         )
         friend_ids = set()
         for f in friends:
-            friend_ids.add(f.sender_id if f.receiver == request.user else f.receiver_id)
+            friend_ids.add(f.from_user_id if f.to_user == request.user else f.to_user_id)
 
         results = QuizResult.objects.filter(
             (Q(user_a=request.user) & Q(user_b_id__in=friend_ids)) |
             (Q(user_b=request.user) & Q(user_a_id__in=friend_ids))
-        ).order_by("-match_score", "-total_questions")
+        ).select_related("user_a", "user_b").order_by("-match_score", "-total_questions")
 
         rankings = []
         for i, r in enumerate(results, 1):

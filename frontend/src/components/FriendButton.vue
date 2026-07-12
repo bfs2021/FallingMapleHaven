@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import { useFriendStore } from '@/stores/friend'
 
 const props = defineProps({
-  userId: { type: Number, required: true },
+  userId: { type: [Number, String], required: true },
   friendStatus: { type: String, default: 'none' },
+  requestId: { type: [Number, String], default: null },
 })
 
 const emit = defineEmits(['status-changed'])
@@ -24,7 +25,8 @@ async function sendRequest() {
 async function handleRequest(action) {
   loading.value = true
   try {
-    await friendStore.handleRequest({ from_user_id: props.userId }, action)
+    const params = props.requestId != null ? { request_id: props.requestId } : { from_user_id: props.userId }
+    await friendStore.handleRequest(params, action)
     emit('status-changed', action === 'accept' ? 'accepted' : 'none')
   } catch { /* ignore */ } finally {
     loading.value = false

@@ -20,7 +20,7 @@ async function fetchInbox() {
   loading.value = true
   try {
     const res = await questionBoxApi.inbox()
-    inboxQuestions.value = res.data || []
+    inboxQuestions.value = res.data?.results || []
   } catch { /* ignore */ } finally {
     loading.value = false
   }

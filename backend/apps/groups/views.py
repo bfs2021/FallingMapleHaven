@@ -1,6 +1,6 @@
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Count, Q, Prefetch
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -15,7 +15,7 @@ from apps.groups.serializers import (
     GroupMemberSerializer,
     GroupUpdateSerializer,
 )
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.chat.models import ChatRoom, ChatRoomMember
 from apps.feed.models import Post
 from apps.feed.serializers import PostSerializer
@@ -28,7 +28,11 @@ class GroupListView(APIView):
     def get(self, request):
         base_qs = InterestGroup.objects.annotate(member_count=Count('members'))
         if request.user.is_authenticated:
-            groups = base_qs.order_by("-created_at")
+            groups = base_qs.annotate(
+                _is_member=Exists(
+                    GroupMember.objects.filter(group=OuterRef('pk'), user=request.user)
+                )
+            ).order_by("-created_at")
         else:
             groups = base_qs.filter(is_public=True).order_by("-created_at")
         serializer = GroupListSerializer(groups, many=True, context={"request": request})
@@ -46,7 +50,7 @@ class GroupCreateView(APIView):
 
         room = ChatRoom.objects.create(
             name=group.name,
-            type=ChatRoom.Type.GROUP,
+            room_type=ChatRoom.Type.GROUP,
             is_group=True,
             group=group,
         )
@@ -111,14 +115,22 @@ class GroupJoinView(APIView):
                     return api_response(code=40001, message="已有待处理的申请", status=status.HTTP_400_BAD_REQUEST)
                 existing_request.delete()
 
-            join_request = GroupJoinRequest.objects.create(group=group, applicant=request.user)
+            join_request, created = GroupJoinRequest.objects.get_or_create(
+                group=group, applicant=request.user,
+                defaults={"status": GroupJoinRequest.Status.PENDING},
+            )
+            if not created:
+                if join_request.status == GroupJoinRequest.Status.PENDING:
+                    return api_response(code=40001, message="已有待处理的申请", status=status.HTTP_400_BAD_REQUEST)
+                join_request.status = GroupJoinRequest.Status.PENDING
+                join_request.save()
 
             admin_members = GroupMember.objects.filter(group=group, role="admin").select_related("user")
             for admin in admin_members:
                 Notification.objects.create(
                     recipient=admin.user,
                     sender=request.user,
-                    type="group_join_request",
+                    notification_type="group_join_request",
                     title="加入小组申请",
                     content=f"{request.user.nickname} 申请加入 {group.name}",
                     link=f"/groups/{group.id}",
@@ -126,22 +138,24 @@ class GroupJoinView(APIView):
 
             return api_response(message="申请已发送，等待组长审核")
 
-        GroupMember.objects.create(group=group, user=request.user)
+        GroupMember.objects.get_or_create(group=group, user=request.user)
 
         room = ChatRoom.objects.filter(group=group).first()
         if room and not ChatRoomMember.objects.filter(room=room, user=request.user).exists():
             ChatRoomMember.objects.create(room=room, user=request.user)
 
         other_members = GroupMember.objects.filter(group=group).exclude(user=request.user).select_related("user")
-        for m in other_members:
-            Notification.objects.create(
-                recipient=m.user,
-                sender=request.user,
-                type="group_member_joined",
+        Notification.objects.bulk_create([
+            Notification(
+                    recipient=m.user,
+                    sender=request.user,
+                    notification_type="group_member_joined",
                 title="新成员加入",
                 content=f"欢迎 {request.user.nickname} 加入 {group.name}",
                 link=f"/groups/{group.id}",
             )
+            for m in other_members
+        ])
 
         return api_response(message="加入成功")
 
@@ -237,9 +251,9 @@ class GroupPostsView(APIView):
         if not group.members.filter(user_id=request.user.id).exists():
             return api_response(code=40003, message="仅成员可查看组内动态", status=status.HTTP_403_FORBIDDEN)
 
-        posts = Post.objects.filter(group_id=pk).order_by("-created_at")
+        posts = Post.objects.filter(group_id=pk).select_related("author", "group").prefetch_related("images", "comments", "likes").order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
@@ -290,8 +304,8 @@ class GroupTransferView(APIView):
         if not membership or request.user != group.creator:
             return api_response(code=40003, message="无权转让小组", status=status.HTTP_403_FORBIDDEN)
 
-        new_owner_id = request.data.get("new_owner_id")
-        if not new_owner_id:
+        new_owner_id = safe_int(request.data.get("new_owner_id"), None)
+        if new_owner_id is None:
             return api_response(code=40001, message="请指定新群主", status=status.HTTP_400_BAD_REQUEST)
 
         new_owner_membership = GroupMember.objects.filter(group=group, user_id=new_owner_id).first()
@@ -308,6 +322,10 @@ class GroupTransferView(APIView):
             new_owner_membership.save()
             group.creator = new_owner_membership.user
             group.save()
+
+            room = ChatRoom.objects.filter(group=group).first()
+            if room:
+                ChatRoomMember.objects.get_or_create(room=room, user_id=new_owner_id)
 
         return api_response(
             data=GroupDetailSerializer(group, context={"request": request}).data
@@ -360,7 +378,7 @@ class GroupJoinRequestHandleView(APIView):
         applicant = join_request.applicant
 
         if action == "approved":
-            GroupMember.objects.create(group=group, user=applicant)
+            GroupMember.objects.get_or_create(group=group, user=applicant)
 
             room = ChatRoom.objects.filter(group=group).first()
             if room and not ChatRoomMember.objects.filter(room=room, user=applicant).exists():
@@ -371,29 +389,31 @@ class GroupJoinRequestHandleView(APIView):
             Notification.objects.create(
                 recipient=applicant,
                 sender=request.user,
-                type="group_request_approved",
+                notification_type="group_request_approved",
                 title="加入申请已通过",
                 content=f"你的加入 {group.name} 申请已通过",
                 link=f"/groups/{group.id}",
             )
 
             all_members = GroupMember.objects.filter(group=group).exclude(user=applicant).select_related("user")
-            for m in all_members:
-                Notification.objects.create(
+            Notification.objects.bulk_create([
+                Notification(
                     recipient=m.user,
                     sender=applicant,
-                    type="group_member_joined",
+                    notification_type="group_member_joined",
                     title="新成员加入",
                     content=f"欢迎 {applicant.nickname} 加入 {group.name}",
                     link=f"/groups/{group.id}",
                 )
+                for m in all_members
+            ])
         else:
             join_request.status = GroupJoinRequest.Status.REJECTED
 
             Notification.objects.create(
                 recipient=applicant,
                 sender=request.user,
-                type="group_request_rejected",
+                notification_type="group_request_rejected",
                 title="加入申请已拒绝",
                 content=f"你的加入 {group.name} 申请已被拒绝",
                 link="",

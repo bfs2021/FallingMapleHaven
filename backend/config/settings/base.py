@@ -8,7 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env()
 env.read_env(BASE_DIR / ".env")
 
-SECRET_KEY = env("SECRET_KEY", default="django-insecure-change-me-in-production")
+from django.core.management.utils import get_random_secret_key
+
+SECRET_KEY = env("SECRET_KEY", default=get_random_secret_key())
 
 DEBUG = False
 

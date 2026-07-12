@@ -73,7 +73,23 @@ class QuizPlugin(BasePlugin):
 
     def get_profile_card_data(self, viewer_id, owner_id):
         if viewer_id == owner_id:
-            return self.get_profile_data(owner_id)
+            from .models import QuizResult
+            from django.db.models import Q, Avg
+            results = QuizResult.objects.filter(
+                Q(user_a_id=owner_id) | Q(user_b_id=owner_id)
+            )
+            stats = results.aggregate(avg_score=Avg("match_score"))
+            return {
+                "type": self.plugin_type,
+                "name": self.display_name,
+                "icon": self.icon,
+                "description": self.description,
+                "data": {
+                    "avg_match_rate": round(float(stats["avg_score"] or 0), 1),
+                    "friend_count": results.count(),
+                },
+                "route": f"/profile/{owner_id}/plugins/quiz",
+            }
         from .models import QuizResult
         from django.db.models import Q
         result = QuizResult.objects.filter(

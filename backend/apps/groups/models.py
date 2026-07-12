@@ -5,7 +5,7 @@ from django.db import models
 class InterestGroup(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
-    cover_image = models.FileField(upload_to="groups/covers/", blank=True, null=True)
+    cover_image = models.ImageField(upload_to="groups/covers/", blank=True, null=True)
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

@@ -14,7 +14,7 @@ class PluginRegistry:
     @classmethod
     def get_active_plugins(cls):
         from .models import Plugin
-        active_types = Plugin.objects.filter(is_active=True).values_list("type", flat=True)
+        active_types = Plugin.objects.filter(is_active=True).values_list("plugin_type", flat=True)
         return {ptype: cls._plugins[ptype] for ptype in active_types if ptype in cls._plugins}
 
     @classmethod

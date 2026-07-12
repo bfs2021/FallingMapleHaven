@@ -9,7 +9,7 @@ from apps.accounts.models import User
 from apps.feed.models import Post
 from apps.friends.models import Friendship
 from apps.profiles.models import GuestbookEntry, UserProfile, VisitRecord
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.profiles.serializers import (
     GuestbookCreateSerializer,
     GuestbookEntrySerializer,
@@ -71,7 +71,11 @@ class ProfileView(APIView):
         if request.user.is_authenticated:
             friend_status = get_friend_status(request.user, user)
             if request.user != user:
-                VisitRecord.objects.create(visitor=request.user, visited_user=user)
+                VisitRecord.objects.update_or_create(
+                    visitor=request.user,
+                    visited_user=user,
+                    defaults={"visited_at": timezone.now()},
+                )
         else:
             friend_status = "none"
 
@@ -99,9 +103,9 @@ class VisitorListView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        visitors = VisitRecord.objects.filter(visited_user=user)
+        visitors = VisitRecord.objects.filter(visited_user=user).select_related("visitor")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
@@ -128,7 +132,7 @@ class UserPostListView(APIView):
         except (User.DoesNotExist, ValueError):
             return user_not_found_response()
 
-        posts = Post.objects.filter(author=user).filter(Q(group_id__isnull=True) | Q(sync_to_profile=True)).select_related("group")
+        posts = Post.objects.filter(author=user).filter(Q(group_id__isnull=True) | Q(sync_to_profile=True)).select_related("author", "group").prefetch_related("images", "comments", "likes")
 
         if request.user.is_authenticated:
             friend_id_set = set()
@@ -152,7 +156,7 @@ class UserPostListView(APIView):
 
         posts = posts.order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
@@ -184,9 +188,9 @@ class GuestbookListView(APIView):
             return user_not_found_response()
 
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        entries = profile.guestbook_entries.all()
+        entries = profile.guestbook_entries.select_related("author")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
@@ -293,12 +297,12 @@ class GuestbookDeleteView(APIView):
 class ProfileAdminView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, user_id):
+    def get(self, request, username_or_id):
         if not request.user.is_staff:
             return api_response(code=40003, message="无权访问", data=None, status=status.HTTP_403_FORBIDDEN)
         try:
-            target = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            target = resolve_profile_user(username_or_id)
+        except (User.DoesNotExist, ValueError):
             return api_response(code=40004, message="用户不存在", data=None, status=status.HTTP_404_NOT_FOUND)
         return api_response(data={
             "user_id": target.id,
@@ -313,12 +317,12 @@ class ProfileAdminView(APIView):
             "bio": target.bio,
         })
 
-    def patch(self, request, user_id):
+    def patch(self, request, username_or_id):
         if not request.user.is_staff:
             return api_response(code=40003, message="无权访问", data=None, status=status.HTTP_403_FORBIDDEN)
         try:
-            target = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
+            target = resolve_profile_user(username_or_id)
+        except (User.DoesNotExist, ValueError):
             return api_response(code=40004, message="用户不存在", data=None, status=status.HTTP_404_NOT_FOUND)
 
         allowed_fields = {"is_active"}

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import UniqueConstraint
 
 
 class UserProfile(models.Model):
@@ -37,6 +38,9 @@ class VisitRecord(models.Model):
     class Meta:
         db_table = "profiles_visitrecord"
         ordering = ["-visited_at"]
+        constraints = [
+            UniqueConstraint(fields=["visitor", "visited_user"], name="uq_visitor_visited"),
+        ]
 
     def __str__(self):
         return f"{self.visitor.username} visited {self.visited_user.username}"

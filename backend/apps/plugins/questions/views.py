@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.notifications.models import Notification
+from django.utils.html import strip_tags
+from apps.common.utils import safe_int
 from apps.plugins.utils import ensure_plugin_active
 from .models import AnonymousQuestion
 from .serializers import (
@@ -28,15 +30,15 @@ class QuestionCreateView(APIView):
         question = AnonymousQuestion.objects.create(
             recipient_id=serializer.validated_data["recipient_id"],
             sender=request.user,
-            content=serializer.validated_data["content"],
+            content=strip_tags(serializer.validated_data["content"]),
             is_public=serializer.validated_data.get("is_public", True),
         )
         Notification.objects.create(
             recipient_id=serializer.validated_data["recipient_id"],
             sender=request.user,
-            type=Notification.Type.ANONYMOUS_QUESTION,
+            notification_type=Notification.Type.ANONYMOUS_QUESTION,
             title="收到匿名提问",
-            content=serializer.validated_data["content"][:100],
+            content=strip_tags(serializer.validated_data["content"])[:100],
             link=f"/profile/{serializer.validated_data['recipient_id']}/plugins/question-box",
         )
         return Response(
@@ -61,11 +63,26 @@ class InboxView(APIView):
             questions = questions.filter(is_answered=False)
         questions = questions.order_by("-created_at")
 
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = safe_int(request.query_params.get("page_size"), 20)
+        start = (page - 1) * page_size
+        end = start + page_size
+        total = questions.count()
+        page_questions = questions[start:end]
+
         if request.user.is_staff:
-            serializer = AdminQuestionSerializer(questions, many=True)
+            serializer = AdminQuestionSerializer(page_questions, many=True)
         else:
-            serializer = QuestionSerializer(questions, many=True)
-        return Response({"code": 0, "message": "success", "data": serializer.data})
+            serializer = QuestionSerializer(page_questions, many=True)
+        return Response({
+            "code": 0, "message": "success",
+            "data": {
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "results": serializer.data,
+            }
+        })
 
 
 class AnswerView(APIView):

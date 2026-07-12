@@ -56,6 +56,7 @@ cover/
 *.pot
 
 # Django stuff:
+backend.err
 *.log
 local_settings.py
 db.sqlite3
@@ -179,3 +180,5 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+*.err
+backend.err

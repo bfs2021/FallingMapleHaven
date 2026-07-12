@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.notifications.models import Notification
 from apps.notifications.serializers import NotificationSerializer
 
@@ -17,7 +17,7 @@ class NotificationListView(APIView):
         if unread_only:
             queryset = queryset.filter(is_read=False)
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size

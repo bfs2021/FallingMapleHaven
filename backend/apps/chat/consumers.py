@@ -1,7 +1,9 @@
 import json
+from urllib.parse import urlparse
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 from apps.chat.models import ChatRoom, Message
@@ -11,12 +13,35 @@ User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.room_groups = []
+
+        origin = None
+        for key, value in self.scope.get("headers", []):
+            if key == b"origin":
+                origin = value.decode()
+                break
+        if origin is None:
+            await self.close()
+            return
+        allowed = False
+        for host in settings.ALLOWED_HOSTS:
+            if host == "*":
+                allowed = True
+                break
+            parsed = urlparse(origin)
+            hostname = parsed.hostname or ""
+            if hostname == host or hostname.endswith("." + host):
+                allowed = True
+                break
+        if not allowed:
+            await self.close()
+            return
+
         self.user = self.scope.get("user")
         if not self.user or not self.user.is_authenticated:
             await self.close()
             return
 
-        self.room_groups = []
         room_ids = await self.get_user_room_ids()
         for room_id in room_ids:
             group_name = f"chat_{room_id}"
@@ -78,7 +103,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg_type=msg_type,
         )
         return {
-            "message_id": msg.id,
+            "id": msg.id,
             "room_id": msg.room_id,
             "sender_id": msg.sender_id,
             "sender_nickname": self.user.nickname,

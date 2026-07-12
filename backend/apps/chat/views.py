@@ -1,6 +1,6 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.db.models import Q
+from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -13,15 +13,19 @@ from apps.chat.serializers import (
     MessageSerializer,
     RoomCreateSerializer,
 )
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 
 
 class RoomListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        rooms = ChatRoom.objects.filter(members__user=request.user).prefetch_related(
-            "members", "messages"
+        last_message = Message.objects.filter(room_id=OuterRef("id")).order_by("-created_at")
+        rooms = ChatRoom.objects.filter(members__user=request.user).select_related("group").prefetch_related(
+            Prefetch("members", queryset=ChatRoomMember.objects.select_related("user")),
+        ).annotate(
+            _last_msg_content=Subquery(last_message.values("content")[:1]),
+            _last_msg_at=Subquery(last_message.values("created_at")[:1]),
         ).order_by("-created_at")
         serializer = ChatRoomListSerializer(rooms, many=True, context={"request": request})
         return api_response(data=serializer.data)
@@ -44,8 +48,8 @@ class RoomMessagesView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        messages = room.messages.all()
-        page = int(request.query_params.get("page", 1))
+        messages = room.messages.select_related("sender")
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 50
         start = (page - 1) * page_size
         end = start + page_size
@@ -91,7 +95,7 @@ class RoomCreateView(APIView):
                 )
 
             existing = ChatRoom.objects.filter(
-                type="private", members__user_id=all_member_ids[0]
+                room_type="private", members__user_id=all_member_ids[0]
             ).filter(members__user_id=all_member_ids[1])
             if existing.exists():
                 room = existing.first()
@@ -101,7 +105,7 @@ class RoomCreateView(APIView):
         room = ChatRoom.objects.create(
             name=name,
             is_group=(room_type == "group"),
-            type=room_type,
+            room_type=room_type,
         )
 
         for uid in all_member_ids:

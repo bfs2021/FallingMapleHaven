@@ -15,7 +15,7 @@ from apps.admin_dashboard.serializers import (
     AdminSiteSettingsUpdateSerializer,
     AdminUserSerializer,
 )
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 from apps.chat.models import ChatRoom, Message
 from apps.feed.models import Comment, Post
 from apps.groups.models import InterestGroup, GroupMember
@@ -49,8 +49,19 @@ class AdminUserListView(APIView, AdminPermissionMixin):
                 | Q(email__icontains=search)
             )
         users = users.order_by("-date_joined")
-        serializer = AdminUserSerializer(users, many=True)
-        return api_response(data=serializer.data)
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = users.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_users = users[start:end]
+        serializer = AdminUserSerializer(page_users, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminUserUpdateView(APIView, AdminPermissionMixin):
@@ -66,7 +77,9 @@ class AdminUserUpdateView(APIView, AdminPermissionMixin):
         except User.DoesNotExist:
             return api_response(code=40004, message="用户不存在", status=status.HTTP_404_NOT_FOUND)
 
-        allowed_fields = {"is_active", "is_staff"}
+        allowed_fields = {"is_active"}
+        if request.user.is_superuser:
+            allowed_fields.add("is_staff")
         updates = {key: value for key, value in request.data.items() if key in allowed_fields}
         for key, value in updates.items():
             setattr(user, key, value)
@@ -90,9 +103,20 @@ class AdminPostListView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        posts = Post.objects.all().order_by("-created_at")
-        serializer = AdminPostSerializer(posts, many=True)
-        return api_response(data=serializer.data)
+        posts = Post.objects.select_related("author").all().order_by("-created_at")
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = posts.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_posts = posts[start:end]
+        serializer = AdminPostSerializer(page_posts, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminPostDeleteView(APIView, AdminPermissionMixin):
@@ -129,8 +153,19 @@ class AdminCommentListView(APIView, AdminPermissionMixin):
             return error
 
         comments = Comment.objects.select_related("author", "post").order_by("-created_at")
-        serializer = AdminCommentSerializer(comments, many=True)
-        return api_response(data=serializer.data)
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = comments.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_comments = comments[start:end]
+        serializer = AdminCommentSerializer(page_comments, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminCommentDeleteView(APIView, AdminPermissionMixin):
@@ -168,9 +203,20 @@ class AdminAnonymousQuestionsView(APIView, AdminPermissionMixin):
 
         from apps.plugins.questions.models import AnonymousQuestion
         from apps.plugins.questions.serializers import AdminQuestionSerializer
-        questions = AnonymousQuestion.objects.all().order_by("-created_at")
-        serializer = AdminQuestionSerializer(questions, many=True)
-        return api_response(data=serializer.data)
+        questions = AnonymousQuestion.objects.select_related("recipient", "sender").all().order_by("-created_at")
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = questions.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_questions = questions[start:end]
+        serializer = AdminQuestionSerializer(page_questions, many=True)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": serializer.data,
+        })
 
 
 class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
@@ -182,10 +228,22 @@ class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
             return error
 
         from apps.plugins.quizzes.models import QuizQuestion, QuizAnswer
-        questions = QuizQuestion.objects.all().select_related("creator", "target_user")
+        questions = QuizQuestion.objects.all().select_related("creator", "target_user").order_by("-created_at")
+
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = questions.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_questions = questions[start:end]
+
+        answer_map = {
+            a.question_id: a
+            for a in QuizAnswer.objects.filter(question_id__in=[q.id for q in page_questions])
+        }
         data = []
-        for q in questions:
-            answer = QuizAnswer.objects.filter(question=q).first()
+        for q in page_questions:
+            answer = answer_map.get(q.id)
             data.append({
                 "id": q.id,
                 "creator": {
@@ -201,7 +259,12 @@ class AdminQuizQuestionsView(APIView, AdminPermissionMixin):
                 "is_correct": answer.is_correct if answer else None,
                 "created_at": q.created_at,
             })
-        return api_response(data=data)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": data,
+        })
 
 
 class AdminPluginListView(APIView, AdminPermissionMixin):
@@ -212,19 +275,30 @@ class AdminPluginListView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        plugins = Plugin.objects.all()
+        plugins = Plugin.objects.all().order_by("id")
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = plugins.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_plugins = plugins[start:end]
         data = [
             {
                 "id": p.id,
                 "name": p.name,
-                "type": p.type,
+                "type": p.plugin_type,
                 "is_active": p.is_active,
                 "config": p.config,
                 "created_at": p.created_at,
             }
-            for p in plugins
+            for p in page_plugins
         ]
-        return api_response(data=data)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": data,
+        })
 
 
 class AdminPluginUpdateView(APIView, AdminPermissionMixin):
@@ -255,7 +329,7 @@ class AdminPluginUpdateView(APIView, AdminPermissionMixin):
         return api_response(data={
             "id": plugin.id,
             "name": plugin.name,
-            "type": plugin.type,
+            "type": plugin.plugin_type,
             "is_active": plugin.is_active,
             "config": plugin.config,
             "created_at": plugin.created_at,
@@ -344,19 +418,19 @@ class AdminLogsView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        logs = SiteLog.objects.all()
+        logs = SiteLog.objects.select_related("user").all()
 
         action = request.query_params.get("action", "").strip()
         if action:
             logs = logs.filter(action=action)
 
-        user_id = request.query_params.get("user_id", "").strip()
-        if user_id:
+        user_id = safe_int(request.query_params.get("user_id"), None)
+        if user_id is not None:
             logs = logs.filter(user_id=user_id)
 
         logs = logs.order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 50
         total = logs.count()
         start = (page - 1) * page_size
@@ -397,7 +471,7 @@ class AdminTrendsView(APIView, AdminPermissionMixin):
         from apps.feed.models import Post
         from apps.accounts.models import User
 
-        days = int(request.query_params.get("days", 7))
+        days = safe_int(request.query_params.get("days"), 7)
         since = timezone.now() - timezone.timedelta(days=days)
 
         user_trends = (
@@ -472,14 +546,21 @@ class AdminGroupListView(APIView, AdminPermissionMixin):
         if error:
             return error
 
-        groups = InterestGroup.objects.annotate(member_count=Count('members'))
+        groups = InterestGroup.objects.select_related("creator").annotate(member_count=Count('members'))
         search = request.query_params.get("search", "").strip()
         if search:
             groups = groups.filter(name__icontains=search)
         groups = groups.order_by("-created_at")
 
+        page = safe_int(request.query_params.get("page"), 1)
+        page_size = 20
+        total = groups.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_groups = groups[start:end]
+
         data = []
-        for g in groups:
+        for g in page_groups:
             data.append({
                 "id": g.id,
                 "name": g.name,
@@ -490,7 +571,12 @@ class AdminGroupListView(APIView, AdminPermissionMixin):
                 "member_count": g.member_count,
                 "created_at": g.created_at,
             })
-        return api_response(data=data)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": data,
+        })
 
 
 class AdminGroupDeleteView(APIView, AdminPermissionMixin):
@@ -538,7 +624,7 @@ class AdminGroupPostsView(APIView, AdminPermissionMixin):
 
         posts = Post.objects.filter(group_id=pk).select_related('author').order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         total = posts.count()
         start = (page - 1) * page_size

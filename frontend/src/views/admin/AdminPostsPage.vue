@@ -21,8 +21,8 @@ async function fetchContent() {
       adminApi.posts(),
       adminApi.comments(),
     ])
-    posts.value = postRes.data || []
-    comments.value = commentRes.data || []
+    posts.value = postRes.data?.results || []
+    comments.value = commentRes.data?.results || []
   } catch {
     error.value = '内容数据加载失败'
   } finally {
@@ -113,7 +113,7 @@ onMounted(fetchContent)
             <td class="px-4 py-3 text-right">
               <button
                 @click="deletePost(post)"
-                class="btn-ghost text-xs text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-150"
+                class="btn-ghost text-xs text-red-500 hover:text-red-600"
                 aria-label="删除动态"
               >
                 <Icon name="trash2" :size="14" />
@@ -148,7 +148,7 @@ onMounted(fetchContent)
             <td class="px-4 py-3 text-right">
               <button
                 @click="deleteComment(comment)"
-                class="btn-ghost text-xs text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-150"
+                class="btn-ghost text-xs text-red-500 hover:text-red-600"
                 aria-label="删除评论"
               >
                 <Icon name="trash2" :size="14" />

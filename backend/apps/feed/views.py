@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.feed.models import Comment, Like, Post, PostFile, PostImage
 from apps.friends.models import Friendship
+from apps.groups.models import GroupMember
 from apps.feed.serializers import (
     CommentCreateSerializer,
     CommentSerializer,
@@ -17,7 +18,7 @@ from apps.feed.serializers import (
     PostSerializer,
 )
 
-from apps.common.utils import api_response
+from apps.common.utils import api_response, safe_int
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 ALLOWED_FILE_EXTENSIONS = {".pdf", ".doc", ".docx", ".zip", ".txt", ".md", ".csv", ".xlsx", ".pptx"}
@@ -54,12 +55,12 @@ class PostListView(APIView):
 
         posts = posts.order_by("-created_at")
 
-        page = int(request.query_params.get("page", 1))
+        page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
         start = (page - 1) * page_size
         end = start + page_size
         total = posts.count()
-        page_posts = posts[start:end].select_related("author").prefetch_related("images", "comments", "likes")
+        page_posts = posts[start:end].select_related("author", "group").prefetch_related("images", "comments", "likes")
 
         serializer = PostSerializer(
             page_posts, many=True, context={"request": request}
@@ -113,6 +114,16 @@ class PostCreateView(APIView):
             if f.size > MAX_FILE_SIZE:
                 return api_response(code=40001, message=f"文件过大(最大50MB): {f.name}", data=None, status=status.HTTP_400_BAD_REQUEST)
 
+        group_id = serializer.validated_data.get("group_id")
+        if group_id is not None:
+            from apps.groups.models import InterestGroup
+            try:
+                group = InterestGroup.objects.get(pk=group_id)
+            except InterestGroup.DoesNotExist:
+                return api_response(code=40004, message="小组不存在", data=None, status=status.HTTP_404_NOT_FOUND)
+            if not group.members.filter(user_id=request.user.id).exists():
+                return api_response(code=40003, message="仅成员可向小组发布动态", data=None, status=status.HTTP_403_FORBIDDEN)
+
         with transaction.atomic():
             post = Post.objects.create(
                 author=request.user,
@@ -139,15 +150,17 @@ class PostCreateView(APIView):
             from apps.groups.models import GroupMember
             from apps.notifications.models import Notification
             members = GroupMember.objects.filter(group_id=post.group_id).exclude(user=request.user).select_related("user")
-            for m in members:
-                Notification.objects.create(
+            Notification.objects.bulk_create([
+                Notification(
                     recipient=m.user,
                     sender=request.user,
-                    type="group_new_post",
+                    notification_type="group_new_post",
                     title="小组新动态",
                     content=f"{request.user.nickname} 在 {post.group.name} 发布了新动态",
                     link="",
                 )
+                for m in members
+            ])
 
         return api_response(
             data=PostSerializer(post, context={"request": request}).data,
@@ -192,6 +205,15 @@ class PostDetailView(APIView):
                 status=Friendship.Status.ACCEPTED,
             ).exists()
             if not is_friend:
+                return api_response(
+                    code=40003,
+                    message="无权查看该动态",
+                    data=None,
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        if post.group and not post.group.is_public:
+            if not request.user.is_authenticated or not GroupMember.objects.filter(group=post.group, user=request.user).exists():
                 return api_response(
                     code=40003,
                     message="无权查看该动态",
@@ -271,7 +293,7 @@ class CommentListView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        comments = post.comments.filter(parent__isnull=True)
+        comments = post.comments.filter(parent__isnull=True).select_related("author")
         serializer = CommentSerializer(comments, many=True)
         return api_response(data=serializer.data)
 

@@ -9,7 +9,7 @@ const loading = ref(true)
 onMounted(async () => {
   try {
     const res = await adminApi.anonymousQuestions()
-    questions.value = res.data || []
+    questions.value = res.data?.results || []
   } catch { /* ignore */ } finally {
     loading.value = false
   }
