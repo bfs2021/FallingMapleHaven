@@ -183,3 +183,7 @@ cython_debug/
 *.err
 backend.err
 audit_report.json
+
+.omo
+.opencode
+.agents
