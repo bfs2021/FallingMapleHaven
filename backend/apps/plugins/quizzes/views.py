@@ -29,6 +29,7 @@ from .serializers import (
     QuizTestDetailOwnerSerializer,
     QuizTestDetailPublicSerializer,
 )
+from .utils import filter_question_bank_by_tag
 
 User = get_user_model()
 VISITOR_COOKIE_NAME = "fmh_visitor_id"
@@ -623,7 +624,6 @@ class QuizQuestionBankView(APIView):
         q = request.query_params.get("q")
         if q:
             bank = bank.filter(question_text__icontains=q)
-        tag = request.query_params.get("tag")
-        if tag:
-            bank = bank.filter(tags__contains=[tag])
+        tag = request.query_params.get("tag", "").strip()
+        bank = filter_question_bank_by_tag(bank, tag)
         return api_response(data=_paginate(bank, request, QuizBankQuestionSerializer, {"request": request}))

@@ -6,6 +6,8 @@ from apps.plugins.models import Plugin
 from apps.plugins.quizzes.models import (
     QuizSubmission,
     QuizSubmissionAnswer,
+    QuizQuestionBank,
+    QuizQuestionBankOption,
     QuizTest,
     QuizTestOption,
     QuizTestQuestion,
@@ -236,3 +238,23 @@ class TestQuizLeaderboard:
 
         scores = [row["score_percent"] for row in resp.json()["data"]["leaderboard"]["results"]]
         assert scores == [100.0, 0.0]
+
+
+class TestQuizQuestionBank:
+    def test_tag_filter_can_combine_with_search(self, alice_client):
+        daily = QuizQuestionBank.objects.create(question_text="更喜欢哪种早餐？", tags=["daily"])
+        QuizQuestionBankOption.objects.bulk_create([
+            QuizQuestionBankOption(bank_question=daily, option_text="豆浆", order=1),
+            QuizQuestionBankOption(bank_question=daily, option_text="牛奶", order=2),
+        ])
+        social = QuizQuestionBank.objects.create(question_text="更喜欢哪种早餐？", tags=["social"])
+        QuizQuestionBankOption.objects.bulk_create([
+            QuizQuestionBankOption(bank_question=social, option_text="热闹", order=1),
+            QuizQuestionBankOption(bank_question=social, option_text="安静", order=2),
+        ])
+
+        resp = alice_client.get(_url("question-bank"), {"q": "早餐", "tag": "daily"})
+
+        assert resp.status_code == 200
+        results = resp.json()["data"]["results"]
+        assert [item["id"] for item in results] == [daily.id]

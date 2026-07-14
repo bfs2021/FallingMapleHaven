@@ -10,7 +10,7 @@ from apps.friends.models import Friendship
 from apps.groups.models import InterestGroup, GroupMember
 from apps.plugins.models import Plugin
 from apps.plugins.questions.models import AnonymousQuestion
-from apps.plugins.quizzes.models import QuizQuestionBank, QuizSubmission, QuizSubmissionAnswer, QuizTest, QuizTestOption, QuizTestQuestion
+from apps.plugins.quizzes.models import QuizQuestionBank, QuizQuestionBankOption, QuizSubmission, QuizSubmissionAnswer, QuizTest, QuizTestOption, QuizTestQuestion
 from apps.profiles.models import VisitRecord
 
 User = get_user_model()
@@ -472,6 +472,22 @@ class TestAdminQuizQuestionsView:
         test_question.refresh_from_db()
         assert test_question.question_text == "Favorite color?"
         assert test_question.source_bank_question_id is None
+
+    def test_question_bank_list_filters_by_tag(self, staff_client):
+        daily = QuizQuestionBank.objects.create(question_text="Daily bank question?", tags=["daily"])
+        QuizQuestionBankOption.objects.bulk_create([
+            QuizQuestionBankOption(bank_question=daily, option_text="A", order=1),
+            QuizQuestionBankOption(bank_question=daily, option_text="B", order=2),
+        ])
+        social = QuizQuestionBank.objects.create(question_text="Social bank question?", tags=["social"])
+        QuizQuestionBankOption.objects.bulk_create([
+            QuizQuestionBankOption(bank_question=social, option_text="A", order=1),
+            QuizQuestionBankOption(bank_question=social, option_text="B", order=2),
+        ])
+
+        data = assert_ok(staff_client.get(f"{URL}/quiz/question-bank/", {"tag": "daily"}))
+
+        assert [item["id"] for item in data["results"]] == [daily.id]
 
     def test_stats(self, staff_client, quiz_test, quiz_submission):
         data = assert_ok(staff_client.get(f"{URL}/quiz/stats/"))

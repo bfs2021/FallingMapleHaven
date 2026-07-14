@@ -21,6 +21,7 @@ from apps.chat.models import ChatRoom, Message
 from apps.feed.models import Comment, Post
 from apps.groups.models import InterestGroup, GroupMember
 from apps.plugins.models import Plugin
+from apps.plugins.quizzes.utils import filter_question_bank_by_tag
 from apps.plugins.registry import PluginRegistry
 
 User = get_user_model()
@@ -454,6 +455,8 @@ class AdminQuizQuestionBankListCreateView(APIView, AdminPermissionMixin):
         q = request.query_params.get("q", "").strip()
         if q:
             questions = questions.filter(question_text__icontains=q)
+        tag = request.query_params.get("tag", "").strip()
+        questions = filter_question_bank_by_tag(questions, tag)
         page, page_size, total, page_questions = admin_paginate(questions, request)
         return api_response(data={
             "total": total,
