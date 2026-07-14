@@ -38,6 +38,9 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
           <p class="text-tag text-text-secondary leading-tight">
             套测试
           </p>
+          <p v-if="plugin.data.entry_text" class="text-tag text-text-secondary leading-tight line-clamp-2">
+            {{ plugin.data.entry_text }}
+          </p>
         </template>
         <template v-else-if="plugin.type === 'question_box'">
           <p class="text-lg font-bold text-maple-600 leading-tight">
