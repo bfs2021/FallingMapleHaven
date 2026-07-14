@@ -414,9 +414,13 @@ class AdminQuizSubmissionDetailView(APIView, AdminPermissionMixin):
         data["test"] = {"id": submission.test_id, "title": submission.test.title, "owner": admin_user_brief(submission.test.owner)}
         data["answers"] = []
         for answer in submission.answers.all().order_by("question__order"):
+            question_data = admin_quiz_question_data(answer.question)
             data["answers"].append({
                 "id": answer.id,
-                "question": admin_quiz_question_data(answer.question),
+                "question": question_data,
+                "question_id": answer.question_id,
+                "question_text": answer.question.question_text,
+                "options": question_data["options"],
                 "selected_option_id": answer.selected_option_id,
                 "correct_option_id": answer.question.correct_option_id,
                 "is_correct": answer.is_correct,

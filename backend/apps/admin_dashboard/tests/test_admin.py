@@ -450,8 +450,12 @@ class TestAdminQuizQuestionsView:
         assert data["results"][0]["test_title"] == "Favorite color test"
 
         detail = assert_ok(staff_client.get(f"{URL}/quiz/submissions/{quiz_submission.id}/"))
-        assert detail["answers"][0]["selected_option_id"] == quiz_submission.answers.first().selected_option_id
-        assert detail["answers"][0]["correct_option_id"] == quiz_submission.answers.first().question.correct_option_id
+        answer = detail["answers"][0]
+        assert answer["question_id"] == quiz_submission.answers.first().question_id
+        assert answer["question_text"] == "Favorite color?"
+        assert len(answer["options"]) == 2
+        assert answer["selected_option_id"] == quiz_submission.answers.first().selected_option_id
+        assert answer["correct_option_id"] == quiz_submission.answers.first().question.correct_option_id
 
     def test_delete_submission_is_soft_delete(self, staff_client, quiz_submission):
         assert_ok(staff_client.delete(f"{URL}/quiz/submissions/{quiz_submission.id}/"))
