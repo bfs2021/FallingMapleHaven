@@ -18,6 +18,22 @@ const selectedTestDetail = ref(null)
 const selectedSubmissionDetail = ref(null)
 const toast = useToast()
 
+const bankCategories = [
+  { value: 'all', label: '全部分类' },
+  { value: 'daily_preference', label: '日常偏好' },
+  { value: 'lifestyle_fun', label: '生活趣味' },
+  { value: 'social_boundary', label: '社交边界' },
+  { value: 'emotion_communication', label: '情绪沟通' },
+  { value: 'values_future', label: '价值未来' },
+  { value: 'memory_imagination', label: '回忆想象' },
+]
+const bankEditableCategories = bankCategories.filter((category) => category.value !== 'all')
+const bankSearch = ref('')
+const bankTag = ref('all')
+const bankForm = ref(blankBankForm())
+const editingBankQuestionId = ref(null)
+const savingBankQuestion = ref(false)
+
 const statCards = computed(() => [
   { label: '测试总数', value: stats.value?.total_tests ?? 0, icon: 'helpCircle' },
   { label: '已发布', value: stats.value?.published_tests ?? 0, icon: 'checkCircle' },
@@ -34,7 +50,7 @@ async function loadAll() {
       adminApi.quizStats(),
       adminApi.quizTests({ page_size: 50 }),
       adminApi.quizSubmissions({ page_size: 50 }),
-      adminApi.quizQuestionBank({ page_size: 50 }),
+      adminApi.quizQuestionBank(bankQueryParams()),
     ])
     stats.value = statsRes.data
     tests.value = testsRes.data?.results || []
@@ -50,6 +66,148 @@ async function loadAll() {
     toast.error(error.response?.data?.message || '问答管理数据加载失败', 5000)
   } finally {
     loading.value = false
+  }
+}
+
+function bankQueryParams() {
+  const params = { page_size: 50 }
+  const query = bankSearch.value.trim()
+  if (query) params.q = query
+  if (bankTag.value !== 'all') params.tag = bankTag.value
+  return params
+}
+
+async function loadBankQuestions() {
+  try {
+    const res = await adminApi.quizQuestionBank(bankQueryParams())
+    bankQuestions.value = res.data?.results || []
+  } catch (error) {
+    toast.error(error.response?.data?.message || '题库加载失败', 5000)
+  }
+}
+
+function applyBankFilter() {
+  loadBankQuestions()
+}
+
+function resetBankFilter() {
+  bankSearch.value = ''
+  bankTag.value = 'all'
+  loadBankQuestions()
+}
+
+function bankCategoryLabel(tag) {
+  return bankCategories.find((category) => category.value === tag)?.label || tag
+}
+
+function blankBankForm() {
+  return {
+    question_text: '',
+    tags: [],
+    options: [
+      { option_text: '' },
+      { option_text: '' },
+    ],
+  }
+}
+
+function resetBankForm() {
+  bankForm.value = blankBankForm()
+  editingBankQuestionId.value = null
+}
+
+function toggleBankTag(tag) {
+  const tags = bankForm.value.tags
+  bankForm.value.tags = tags.includes(tag)
+    ? tags.filter((item) => item !== tag)
+    : [...tags, tag]
+}
+
+function addBankOption() {
+  if (bankForm.value.options.length >= 4) return
+  bankForm.value.options.push({ option_text: '' })
+}
+
+function removeBankOption(index) {
+  if (bankForm.value.options.length <= 2) return
+  bankForm.value.options.splice(index, 1)
+}
+
+function editBankQuestion(question) {
+  editingBankQuestionId.value = question.id
+  bankForm.value = {
+    question_text: question.question_text || '',
+    tags: [...(question.tags || [])],
+    options: (question.options || []).slice(0, 4).map((option) => ({
+      option_text: optionLabel(option),
+    })),
+  }
+  while (bankForm.value.options.length < 2) {
+    bankForm.value.options.push({ option_text: '' })
+  }
+}
+
+function bankQuestionPayload() {
+  return {
+    question_text: bankForm.value.question_text.trim(),
+    tags: bankForm.value.tags,
+    options: bankForm.value.options.map((option, index) => ({
+      option_text: option.option_text.trim(),
+      order: index + 1,
+    })),
+  }
+}
+
+async function saveBankQuestion() {
+  const payload = bankQuestionPayload()
+  if (!payload.question_text) {
+    toast.error('请填写题目内容')
+    return
+  }
+  if (payload.options.some((option) => !option.option_text)) {
+    toast.error('请填写所有选项')
+    return
+  }
+  if (payload.options.length < 2 || payload.options.length > 4) {
+    toast.error('题库题目需要 2-4 个选项')
+    return
+  }
+
+  savingBankQuestion.value = true
+  try {
+    if (editingBankQuestionId.value) {
+      await adminApi.updateQuizQuestionBank(editingBankQuestionId.value, payload)
+      toast.success('题库题目已更新')
+    } else {
+      await adminApi.createQuizQuestionBank(payload)
+      toast.success('题库题目已创建')
+    }
+    resetBankForm()
+    await loadAll()
+  } catch (error) {
+    toast.error(error.response?.data?.message || '题库题目保存失败', 5000)
+  } finally {
+    savingBankQuestion.value = false
+  }
+}
+
+async function deleteBankQuestion(question) {
+  const ok = await confirm({
+    title: '删除题库题目',
+    message: `确认删除「${question.question_text}」？`,
+    confirmText: '删除',
+    variant: 'danger',
+  })
+  if (!ok) return
+  actingId.value = `bank-${question.id}`
+  try {
+    await adminApi.deleteQuizQuestionBank(question.id)
+    if (editingBankQuestionId.value === question.id) resetBankForm()
+    await loadAll()
+  } catch (error) {
+    toast.error(error.response?.data?.message || '题库题目删除失败', 5000)
+  } finally {
+    actingId.value = null
   }
 }
 
@@ -298,12 +456,101 @@ function formatDate(value) {
       </section>
     </div>
 
-    <div v-else class="grid gap-4 md:grid-cols-2">
-      <article v-for="question in bankQuestions" :key="question.id" class="card-base p-4 space-y-2">
-        <h3 class="font-medium text-text-primary">{{ question.question_text }}</h3>
-        <p class="text-sm text-text-secondary">{{ question.options?.length || 0 }} 个选项</p>
-      </article>
-      <div v-if="!bankQuestions.length" class="card-base p-10 text-center text-text-secondary md:col-span-2">暂无题库题目</div>
+    <div v-else class="space-y-4">
+      <section class="card-base p-4 space-y-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div class="flex flex-1 flex-col gap-3 sm:flex-row">
+            <label class="min-w-0 flex-1 space-y-1">
+              <span class="text-xs text-text-secondary">搜索题目</span>
+              <input v-model="bankSearch" class="input-base" placeholder="输入题目关键词" @keyup.enter="applyBankFilter" />
+            </label>
+            <label class="space-y-1 sm:w-48">
+              <span class="text-xs text-text-secondary">分类</span>
+              <select v-model="bankTag" class="input-base" @change="applyBankFilter">
+                <option v-for="category in bankCategories" :key="category.value" :value="category.value">{{ category.label }}</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn-secondary px-4 py-2" @click="applyBankFilter">筛选</button>
+            <button class="btn-ghost px-4 py-2 text-text-secondary" @click="resetBankFilter">重置</button>
+          </div>
+        </div>
+
+        <div class="border-t border-border pt-4 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="font-semibold text-text-primary">{{ editingBankQuestionId ? '编辑题库题目' : '新增题库题目' }}</h3>
+            <button v-if="editingBankQuestionId" class="btn-ghost px-3 py-1 text-text-secondary" @click="resetBankForm">取消编辑</button>
+          </div>
+
+          <label class="block space-y-1">
+            <span class="text-xs text-text-secondary">题目内容</span>
+            <textarea v-model="bankForm.question_text" class="input-base min-h-20 resize-y" placeholder="填写题目内容" />
+          </label>
+
+          <div class="space-y-2">
+            <span class="text-xs text-text-secondary">分类标签</span>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="category in bankEditableCategories"
+                :key="category.value"
+                type="button"
+                class="rounded-full border px-3 py-1 text-xs transition-colors"
+                :class="bankForm.tags.includes(category.value) ? 'border-maple-300 bg-maple-50 text-maple-700' : 'border-border text-text-secondary hover:bg-maple-50/50'"
+                @click="toggleBankTag(category.value)"
+              >
+                {{ category.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-xs text-text-secondary">选项（2-4 个）</span>
+              <button class="btn-ghost px-3 py-1 text-maple-600" :disabled="bankForm.options.length >= 4" @click="addBankOption">添加选项</button>
+            </div>
+            <div class="grid gap-2 md:grid-cols-2">
+              <div v-for="(option, index) in bankForm.options" :key="index" class="flex items-center gap-2">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-maple-100 text-xs font-medium text-maple-700">{{ index + 1 }}</span>
+                <input v-model="option.option_text" class="input-base min-w-0" :placeholder="`选项 ${index + 1}`" />
+                <button class="btn-ghost px-2 py-1 text-red-600" :disabled="bankForm.options.length <= 2" @click="removeBankOption(index)">移除</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button class="btn-secondary px-4 py-2" @click="resetBankForm">清空</button>
+            <button class="btn-primary px-4 py-2" :disabled="savingBankQuestion" @click="saveBankQuestion">
+              {{ savingBankQuestion ? '保存中...' : (editingBankQuestionId ? '保存修改' : '创建题目') }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card-base overflow-hidden">
+        <div class="border-b border-border bg-maple-50/60 px-4 py-3 text-sm font-medium text-text-secondary">题库列表</div>
+        <div v-if="bankQuestions.length" class="divide-y divide-border">
+          <article v-for="question in bankQuestions" :key="question.id" class="p-4 hover:bg-maple-50/40">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div class="min-w-0 space-y-2">
+                <h3 class="font-medium text-text-primary">{{ question.question_text }}</h3>
+                <div class="flex flex-wrap gap-2 text-xs">
+                  <span v-for="tag in question.tags || []" :key="tag" class="rounded-full bg-maple-50 px-2 py-0.5 text-maple-700">{{ bankCategoryLabel(tag) }}</span>
+                  <span class="text-text-secondary">{{ question.options?.length || 0 }} 个选项</span>
+                </div>
+                <div class="flex flex-wrap gap-2 text-sm text-text-secondary">
+                  <span v-for="option in question.options || []" :key="option.id || option.order || optionLabel(option)" class="rounded-lg border border-border px-2 py-1">{{ optionLabel(option) }}</span>
+                </div>
+              </div>
+              <div class="flex shrink-0 items-center gap-2">
+                <button class="btn-ghost px-3 py-1 text-maple-600" @click="editBankQuestion(question)">编辑</button>
+                <button class="btn-ghost px-3 py-1 text-red-600" :disabled="actingId === `bank-${question.id}`" @click="deleteBankQuestion(question)">删除</button>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div v-else class="p-10 text-center text-text-secondary">暂无题库题目</div>
+      </section>
     </div>
   </div>
 </template>
