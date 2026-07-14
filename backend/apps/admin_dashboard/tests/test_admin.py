@@ -502,11 +502,39 @@ class TestAdminQuizQuestionsView:
 
         assert [item["id"] for item in data["results"]] == [daily.id]
 
-    def test_stats(self, staff_client, quiz_test, quiz_submission):
+    def test_stats(self, staff_client, admin_user, quiz_test, quiz_submission):
+        QuizTest.objects.create(owner=admin_user, title="Draft stats test", status=QuizTest.Status.DRAFT)
+        QuizTest.objects.create(owner=admin_user, title="Deleted stats test", status=QuizTest.Status.DELETED)
+        QuizSubmission.objects.create(
+            test=quiz_test,
+            participant_type=QuizSubmission.ParticipantType.VISITOR,
+            participant_name="访客",
+            correct_count=0,
+            score_percent=0,
+            title="神秘距离感",
+        )
+        QuizSubmission.objects.create(
+            test=quiz_test,
+            participant_type=QuizSubmission.ParticipantType.USER,
+            user=admin_user,
+            participant_name=admin_user.nickname,
+            correct_count=0,
+            score_percent=0,
+            title="神秘距离感",
+            is_deleted=True,
+        )
+
         data = assert_ok(staff_client.get(f"{URL}/quiz/stats/"))
-        assert data["total_tests"] >= 1
-        assert data["total_submissions"] >= 1
-        assert "question_bank_count" in data
+        assert data == {
+            "total_tests": 3,
+            "published_tests": 1,
+            "draft_tests": 1,
+            "deleted_tests": 1,
+            "total_submissions": 2,
+            "user_submissions": 1,
+            "visitor_submissions": 1,
+            "question_bank_count": 0,
+        }
 
 
 # ═══════════════════════════════════════════════════════════════
