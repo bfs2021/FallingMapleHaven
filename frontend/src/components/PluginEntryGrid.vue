@@ -30,18 +30,15 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
       </div>
 
       <!-- Data summary -->
-      <div v-if="plugin.data" class="w-full space-y-0.5">
-        <template v-if="plugin.type === 'quiz'">
-          <p class="text-lg font-bold text-maple-600 leading-tight">
-            {{ plugin.data.published_test_count ?? 0 }}
-          </p>
-          <p class="text-tag text-text-secondary leading-tight">
-            套测试
-          </p>
-          <p v-if="plugin.data.entry_text" class="text-tag text-text-secondary leading-tight line-clamp-2">
-            {{ plugin.data.entry_text }}
-          </p>
-        </template>
+	      <div v-if="plugin.data" class="w-full space-y-0.5">
+	        <template v-if="plugin.type === 'quiz'">
+	          <p class="text-sm font-semibold text-maple-700 leading-snug line-clamp-2">
+	            {{ plugin.data.entry_text || plugin.description || '来测测你有多了解我' }}
+	          </p>
+	          <p class="text-tag text-text-secondary leading-tight">
+	            已发布 {{ plugin.data.published_test_count ?? 0 }} 套测试
+	          </p>
+	        </template>
         <template v-else-if="plugin.type === 'question_box'">
           <p class="text-lg font-bold text-maple-600 leading-tight">
             {{ plugin.data.unanswered_count ?? 0 }}
