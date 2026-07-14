@@ -45,6 +45,7 @@ const questionProgressPercent = computed(() => (
 const currentLeaderboardResult = computed(() => (
   leaderboard.value?.leaderboard?.results?.find((item) => item.is_current) || null
 ))
+const ownerTestLimitReached = computed(() => isOwner.value && tests.value.length >= 3)
 
 onMounted(loadPage)
 
@@ -110,6 +111,10 @@ async function loadLeaderboard() {
 }
 
 async function createDraft() {
+  if (ownerTestLimitReached.value) {
+    toast.error('每个主页主人最多创建 3 套测试', 5000)
+    return
+  }
   creating.value = true
   try {
     const res = await quizApi.createTest({ title: '你有多了解我？', questions: [] })
@@ -277,9 +282,12 @@ async function shareCurrentResultUrl() {
           <h2 class="text-base font-semibold text-text-primary">管理我的测试</h2>
           <p class="text-sm text-text-secondary mt-1">最多保留 3 套未删除测试，草稿可继续编辑后发布。</p>
         </div>
-        <button class="btn-primary px-4 py-2" type="button" :disabled="creating" @click="createDraft">
+        <button class="btn-primary px-4 py-2" type="button" :disabled="creating || ownerTestLimitReached" @click="createDraft">
           {{ creating ? '创建中...' : '创建测试' }}
         </button>
+      </div>
+      <div v-if="ownerTestLimitReached" class="card-base p-4 text-sm text-text-secondary">
+        已达到 3 套测试上限。删除不再使用的测试后，可以继续创建新测试。
       </div>
 
       <section v-if="mySubmissions.length" class="card-base overflow-hidden">
