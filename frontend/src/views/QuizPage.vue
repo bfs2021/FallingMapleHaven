@@ -13,6 +13,7 @@ const authStore = useAuthStore()
 const { confirm } = useConfirm()
 
 const tests = ref([])
+const mySubmissions = ref([])
 const currentTest = ref(null)
 const leaderboard = ref(null)
 const answers = ref({})
@@ -27,6 +28,7 @@ const ownerId = computed(() => Number(route.params.userId))
 const testId = computed(() => route.params.testId ? Number(route.params.testId) : null)
 const isLeaderboardRoute = computed(() => route.name === 'QuizTestLeaderboard')
 const isOwner = computed(() => authStore.isAuthenticated && authStore.userId === ownerId.value)
+const shouldLoadMySubmissions = computed(() => !testId.value && authStore.isAuthenticated && !isOwner.value)
 const answeredCount = computed(() => Object.keys(answers.value).length)
 
 onMounted(loadPage)
@@ -48,13 +50,24 @@ async function loadPage() {
 
 async function loadTests() {
   loading.value = true
+  mySubmissions.value = []
   try {
     const res = isOwner.value ? await quizApi.myTests() : await quizApi.publicTests(ownerId.value)
     tests.value = res.data?.results || []
+    if (shouldLoadMySubmissions.value) await loadMySubmissions()
   } catch (error) {
     toast.error(error.response?.data?.message || '测试列表加载失败', 5000)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadMySubmissions() {
+  try {
+    const res = await quizApi.mySubmissions({ page_size: 20 })
+    mySubmissions.value = res.data?.results || []
+  } catch (error) {
+    toast.error(error.response?.data?.message || '我答过的加载失败', 5000)
   }
 }
 
@@ -205,6 +218,31 @@ function goToLeaderboard(id, answerId = null) {
           {{ creating ? '创建中...' : '创建测试' }}
         </button>
       </div>
+
+      <section v-if="mySubmissions.length" class="card-base overflow-hidden">
+        <div class="px-5 py-4 border-b border-border">
+          <h2 class="text-base font-semibold text-text-primary">我答过的</h2>
+          <p class="text-sm text-text-secondary mt-1">最近参与过的默契问答，可直接回到对应答卷榜。</p>
+        </div>
+        <div class="divide-y divide-border">
+          <article
+            v-for="item in mySubmissions"
+            :key="item.submission.id"
+            class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="min-w-0 space-y-1">
+              <h3 class="font-medium text-text-primary truncate">{{ item.test.title }}</h3>
+              <p class="text-sm text-text-secondary">
+                {{ item.submission.score_percent }}% · {{ item.submission.correct_count }}/10 · {{ item.submission.title }}
+              </p>
+              <p class="text-xs text-text-secondary">{{ new Date(item.submission.created_at).toLocaleString('zh-CN') }}</p>
+            </div>
+            <button class="btn-secondary px-4 py-2 shrink-0" @click="goToLeaderboard(item.test.id, item.submission.id)">
+              查看答卷榜
+            </button>
+          </article>
+        </div>
+      </section>
 
       <div v-if="!tests.length" class="card-base py-14 px-6 text-center">
         <Icon name="helpCircle" :size="44" class="mx-auto mb-3 text-maple-300" />
