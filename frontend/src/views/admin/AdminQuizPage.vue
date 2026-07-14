@@ -37,8 +37,12 @@ const savingBankQuestion = ref(false)
 const statCards = computed(() => [
   { label: '测试总数', value: stats.value?.total_tests ?? 0, icon: 'helpCircle' },
   { label: '已发布', value: stats.value?.published_tests ?? 0, icon: 'checkCircle' },
-  { label: '答卷总数', value: stats.value?.total_submissions ?? 0, icon: 'clipboardList' },
-  { label: '题库题数', value: stats.value?.question_bank_count ?? 0, icon: 'library' },
+  { label: '草稿', value: stats.value?.draft_tests ?? 0, icon: 'edit' },
+  { label: '已删除测试', value: stats.value?.deleted_tests ?? 0, icon: 'trash' },
+  { label: '答卷总数', value: stats.value?.total_submissions ?? 0, icon: 'fileText' },
+  { label: '登录用户答卷', value: stats.value?.user_submissions ?? 0, icon: 'user' },
+  { label: '访客答卷', value: stats.value?.visitor_submissions ?? 0, icon: 'users' },
+  { label: '题库题数', value: stats.value?.question_bank_count ?? 0, icon: 'list' },
 ])
 
 onMounted(loadAll)
