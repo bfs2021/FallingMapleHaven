@@ -306,11 +306,18 @@ async function shareCurrentResultUrl() {
           </article>
         </div>
       </section>
+      <section v-else-if="shouldLoadMySubmissions" class="card-base p-5 text-center text-text-secondary">
+        你还没有答过默契测试
+      </section>
 
       <div v-if="!tests.length" class="card-base py-14 px-6 text-center">
         <Icon name="helpCircle" :size="44" class="mx-auto mb-3 text-maple-300" />
-        <h2 class="text-lg font-semibold text-text-primary">还没有可参与的测试</h2>
-        <p class="text-sm text-text-secondary mt-2">主页主人发布测试后，登录用户和访客都可以在这里答题。</p>
+        <h2 class="text-lg font-semibold text-text-primary">
+          {{ isOwner ? '还没有创建默契测试，先创建一套吧' : 'TA 还没有发布测试' }}
+        </h2>
+        <p class="text-sm text-text-secondary mt-2">
+          {{ isOwner ? '创建草稿后可继续补题并发布。' : '主页主人发布测试后，登录用户和访客都可以在这里答题。' }}
+        </p>
       </div>
 
       <div v-else class="grid gap-4 sm:grid-cols-2">
@@ -504,7 +511,7 @@ async function shareCurrentResultUrl() {
       </div>
 
       <div v-if="!leaderboard?.leaderboard?.results?.length" class="card-base py-12 text-center text-text-secondary">
-        暂无答卷记录
+        还没有人完成测试
       </div>
       <div v-else class="card-base divide-y divide-border overflow-hidden">
         <div
