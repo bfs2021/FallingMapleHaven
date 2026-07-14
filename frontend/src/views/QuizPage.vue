@@ -18,6 +18,7 @@ const currentTest = ref(null)
 const leaderboard = ref(null)
 const answers = ref({})
 const visitorName = ref('')
+const currentQuestionIndex = ref(0)
 const loading = ref(false)
 const submitting = ref(false)
 const creating = ref(false)
@@ -30,6 +31,17 @@ const isLeaderboardRoute = computed(() => route.name === 'QuizTestLeaderboard')
 const isOwner = computed(() => authStore.isAuthenticated && authStore.userId === ownerId.value)
 const shouldLoadMySubmissions = computed(() => !testId.value && authStore.isAuthenticated && !isOwner.value)
 const answeredCount = computed(() => Object.keys(answers.value).length)
+const questionCount = computed(() => currentTest.value?.questions?.length || 0)
+const currentQuestion = computed(() => currentTest.value?.questions?.[currentQuestionIndex.value] || null)
+const currentQuestionNumber = computed(() => currentQuestionIndex.value + 1)
+const isFirstQuestion = computed(() => currentQuestionIndex.value === 0)
+const isLastQuestion = computed(() => currentQuestionIndex.value >= questionCount.value - 1)
+const isCurrentQuestionAnswered = computed(() => (
+  currentQuestion.value ? Boolean(answers.value[currentQuestion.value.id]) : false
+))
+const questionProgressPercent = computed(() => (
+  questionCount.value ? (currentQuestionNumber.value / questionCount.value) * 100 : 0
+))
 const currentLeaderboardResult = computed(() => (
   leaderboard.value?.leaderboard?.results?.find((item) => item.is_current) || null
 ))
@@ -43,6 +55,7 @@ watch(
 
 async function loadPage() {
   answers.value = {}
+  currentQuestionIndex.value = 0
   if (testId.value) {
     await loadTestDetail()
     if (isLeaderboardRoute.value) await loadLeaderboard()
@@ -148,6 +161,16 @@ function editTest(id) {
 
 function selectAnswer(questionId, optionId) {
   answers.value = { ...answers.value, [questionId]: optionId }
+}
+
+function goToPreviousQuestion() {
+  if (isFirstQuestion.value) return
+  currentQuestionIndex.value -= 1
+}
+
+function goToNextQuestion() {
+  if (isLastQuestion.value || !isCurrentQuestionAnswered.value) return
+  currentQuestionIndex.value += 1
 }
 
 async function submitAnswers() {
@@ -341,34 +364,69 @@ async function shareLeaderboardUrl() {
           <input v-model="visitorName" maxlength="12" class="input-base" placeholder="请输入 12 字以内昵称" />
         </div>
 
-        <section v-for="question in currentTest.questions" :key="question.id" class="card-base p-5 space-y-4">
+        <section v-if="currentQuestion" class="card-base p-5 space-y-5">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="font-medium text-maple-700">
+                第 {{ currentQuestionNumber }} / {{ questionCount }} 题
+              </span>
+              <span class="text-text-secondary">已答 {{ answeredCount }} / {{ currentTest.question_count }}</span>
+            </div>
+            <div class="h-2 overflow-hidden rounded-full bg-maple-50">
+              <div
+                class="h-full rounded-full bg-maple-400 transition-all duration-300"
+                :style="{ width: `${questionProgressPercent}%` }"
+              />
+            </div>
+          </div>
+
           <div class="flex gap-3">
             <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-maple-100 text-sm font-semibold text-maple-700">
-              {{ question.order }}
+              {{ currentQuestion.order }}
             </span>
-            <h3 class="font-medium text-text-primary leading-7">{{ question.question_text }}</h3>
+            <h3 class="font-medium text-text-primary leading-7">{{ currentQuestion.question_text }}</h3>
           </div>
           <div class="grid gap-2 sm:grid-cols-2">
             <button
-              v-for="option in question.options"
+              v-for="option in currentQuestion.options"
               :key="option.id"
               type="button"
               class="rounded-xl border px-4 py-3 text-left text-sm transition-colors"
-              :class="answers[question.id] === option.id ? 'border-maple-500 bg-maple-50 text-maple-800' : 'border-border bg-white text-text-primary hover:border-maple-300'"
-              @click="selectAnswer(question.id, option.id)"
+              :class="answers[currentQuestion.id] === option.id ? 'border-maple-500 bg-maple-50 text-maple-800' : 'border-border bg-white text-text-primary hover:border-maple-300'"
+              @click="selectAnswer(currentQuestion.id, option.id)"
             >
               {{ option.option_text }}
             </button>
           </div>
-        </section>
 
-        <button
-          type="submit"
-          class="btn-primary w-full justify-center py-2.5"
-          :disabled="submitting || answeredCount !== currentTest.question_count || (!authStore.isAuthenticated && !visitorName.trim())"
-        >
-          {{ submitting ? '提交中...' : `提交答案 (${answeredCount}/${currentTest.question_count})` }}
-        </button>
+          <div class="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              class="btn-secondary px-4 py-2"
+              :disabled="isFirstQuestion"
+              @click="goToPreviousQuestion"
+            >
+              上一题
+            </button>
+            <button
+              v-if="!isLastQuestion"
+              type="button"
+              class="btn-primary px-4 py-2"
+              :disabled="!isCurrentQuestionAnswered"
+              @click="goToNextQuestion"
+            >
+              下一题
+            </button>
+            <button
+              v-else
+              type="submit"
+              class="btn-primary px-4 py-2"
+              :disabled="submitting || answeredCount !== currentTest.question_count || (!authStore.isAuthenticated && !visitorName.trim())"
+            >
+              {{ submitting ? '提交中...' : `提交答案 (${answeredCount}/${currentTest.question_count})` }}
+            </button>
+          </div>
+        </section>
       </form>
     </template>
 
