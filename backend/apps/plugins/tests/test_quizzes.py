@@ -129,6 +129,35 @@ class TestQuizPublish:
         assert resp.status_code == 400
         assert resp.json()["code"] == 40005
 
+    def test_publish_validates_option_count_too_few(self, alice_client):
+        questions = [_question_payload(i) for i in range(1, 11)]
+        questions[0]["options"] = [{"option_text": "唯一选项", "order": 1}]
+        create_resp = alice_client.post(_url("my-tests"), {"title": "测试", "questions": questions}, format="json")
+        assert create_resp.status_code == 201
+        test_id = create_resp.json()["data"]["id"]
+
+        resp = alice_client.post(_url("publish-test", test_id))
+
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40001
+        errors = resp.json()["data"]["errors"]
+        assert any("options" in e["field"] for e in errors)
+        assert any("message" in e for e in errors)
+
+    def test_publish_validates_missing_correct_answer(self, alice_client):
+        questions = [_question_payload(i) for i in range(1, 11)]
+        del questions[3]["correct_option_order"]
+        create_resp = alice_client.post(_url("my-tests"), {"title": "测试", "questions": questions}, format="json")
+        assert create_resp.status_code == 201
+        test_id = create_resp.json()["data"]["id"]
+
+        resp = alice_client.post(_url("publish-test", test_id))
+
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40001
+        errors = resp.json()["data"]["errors"]
+        assert any("correct_option" in e["field"] for e in errors)
+
 
 class TestQuizPublicDetail:
     def test_public_detail_does_not_expose_standard_answers(self, client, published_test):
@@ -214,6 +243,18 @@ class TestQuizSubmit:
         assert resp.status_code == 400
         assert resp.json()["code"] == 40001
 
+    def test_visitor_duplicate_submit_is_rejected(self, client, alice, published_test):
+        payload = {**_answer_payload(published_test, correct=False), "participant_name": "访客"}
+
+        first_resp = client.post(_url("submit-test", published_test.id), payload, format="json")
+        assert first_resp.status_code == 201
+
+        resp = client.post(_url("submit-test", published_test.id), payload, format="json")
+
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40005
+        assert "leaderboard_url" in resp.json()["data"]
+
 
 class TestQuizLeaderboard:
     def test_leaderboard_is_per_test_and_uses_tied_rank(self, bob_client, charlie_client, bob, charlie, published_test):
@@ -229,6 +270,7 @@ class TestQuizLeaderboard:
         assert any(row["is_current"] for row in rows)
         assert {row["participant_name"] for row in rows} == {bob.nickname, charlie.nickname}
         assert "correct_option_id" not in rows[0]
+        assert "selected_option_id" not in rows[0]
 
     def test_leaderboard_sorts_by_score_desc(self, bob_client, charlie_client, published_test):
         bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test, correct=False), format="json")
@@ -241,6 +283,10 @@ class TestQuizLeaderboard:
 
 
 class TestQuizQuestionBank:
+    def test_requires_authentication(self, client):
+        resp = client.get(_url("question-bank"))
+        assert resp.status_code == 403
+
     def test_tag_filter_can_combine_with_search(self, alice_client):
         daily = QuizQuestionBank.objects.create(question_text="更喜欢哪种早餐？", tags=["daily"])
         QuizQuestionBankOption.objects.bulk_create([
@@ -258,3 +304,88 @@ class TestQuizQuestionBank:
         assert resp.status_code == 200
         results = resp.json()["data"]["results"]
         assert [item["id"] for item in results] == [daily.id]
+
+
+class TestMyQuizSubmissions:
+    """GET /api/v1/plugins/quiz/my/submissions/"""
+
+    def test_requires_authentication(self, client):
+        resp = client.get(_url("my-submissions"))
+        assert resp.status_code == 403
+
+    def test_returns_only_own_submissions(self, bob_client, charlie_client, published_test):
+        bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+        charlie_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+
+        resp = bob_client.get(_url("my-submissions"))
+
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["total"] == 1
+        result = data["results"][0]
+        assert result["submission"]["correct_count"] == 10
+        assert result["test"]["title"] == published_test.title
+        assert "leaderboard_url" in result
+
+        QuizSubmission.objects.filter(id=result["submission"]["id"]).update(is_deleted=True)
+        resp = bob_client.get(_url("my-submissions"))
+
+        assert resp.status_code == 200
+        assert resp.json()["data"]["total"] == 0
+
+
+class TestQuizAvailabilityGuard:
+    """Draft/deleted tests must be unavailable via public endpoints."""
+
+    def test_draft_test_not_available_via_public_detail(self, client, alice_client):
+        create_resp = alice_client.post(_url("my-tests"), _test_payload(count=2), format="json")
+        draft_id = create_resp.json()["data"]["id"]
+
+        resp = client.get(_url("public-test-detail", draft_id))
+
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004
+
+    def test_deleted_test_not_available_via_public_detail(self, client, alice_client, published_test):
+        alice_client.delete(_url("my-test-detail", published_test.id))
+
+        resp = client.get(_url("public-test-detail", published_test.id))
+
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004
+
+    def test_deleted_test_excluded_from_public_list(self, client, alice_client, alice, published_test):
+        alice_client.delete(_url("my-test-detail", published_test.id))
+
+        resp = client.get(_url("public-tests", alice.id))
+
+        assert resp.status_code == 200
+        ids = [item["id"] for item in resp.json()["data"]["results"]]
+        assert published_test.id not in ids
+
+    def test_draft_test_excluded_from_public_list(self, client, alice_client, alice):
+        create_resp = alice_client.post(_url("my-tests"), _test_payload(count=2), format="json")
+        draft_id = create_resp.json()["data"]["id"]
+
+        resp = client.get(_url("public-tests", alice.id))
+
+        assert resp.status_code == 200
+        ids = [item["id"] for item in resp.json()["data"]["results"]]
+        assert draft_id not in ids
+
+    def test_draft_test_not_submittable(self, client, alice_client):
+        create_resp = alice_client.post(_url("my-tests"), _test_payload(count=2), format="json")
+        draft_id = create_resp.json()["data"]["id"]
+
+        resp = client.post(_url("submit-test", draft_id), {"answers": []}, format="json")
+
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004
+
+    def test_deleted_test_not_submittable(self, client, alice_client, published_test):
+        alice_client.delete(_url("my-test-detail", published_test.id))
+
+        resp = client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004

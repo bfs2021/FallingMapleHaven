@@ -200,6 +200,19 @@ class TestPermissionRequired:
     def test_regular_user_group_posts(self, alice_client, test_group):
         assert_staff_denied(alice_client.get(f"{URL}/groups/{test_group.pk}/posts/"))
 
+    def test_regular_user_quiz_admin_endpoints(self, alice_client, quiz_test, quiz_submission):
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/tests/{quiz_test.pk}/"))
+        assert_staff_denied(alice_client.delete(f"{URL}/quiz/tests/{quiz_test.pk}/"))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/submissions/"))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/submissions/{quiz_submission.pk}/"))
+        assert_staff_denied(alice_client.delete(f"{URL}/quiz/submissions/{quiz_submission.pk}/"))
+        assert_staff_denied(alice_client.post(
+            f"{URL}/quiz/question-bank/",
+            {"question_text": "test", "options": [{"option_text": "A", "order": 1}, {"option_text": "B", "order": 2}]},
+            format="json",
+        ))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/stats/"))
+
 
 # ═══════════════════════════════════════════════════════════════
 #  1. AdminUserListView
