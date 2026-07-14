@@ -30,6 +30,9 @@ const isLeaderboardRoute = computed(() => route.name === 'QuizTestLeaderboard')
 const isOwner = computed(() => authStore.isAuthenticated && authStore.userId === ownerId.value)
 const shouldLoadMySubmissions = computed(() => !testId.value && authStore.isAuthenticated && !isOwner.value)
 const answeredCount = computed(() => Object.keys(answers.value).length)
+const currentLeaderboardResult = computed(() => (
+  leaderboard.value?.leaderboard?.results?.find((item) => item.is_current) || null
+))
 
 onMounted(loadPage)
 
@@ -182,6 +185,24 @@ function goToLeaderboard(id, answerId = null) {
     params: { userId: ownerId.value, testId: id },
     query: answerId ? { answerId } : {},
   })
+}
+
+async function shareLeaderboardUrl() {
+  if (typeof window === 'undefined') return
+
+  const currentUrl = window.location.href
+  let clipboardFailed = false
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(currentUrl)
+      toast.success('答卷榜链接已复制')
+      return
+    } catch {
+      clipboardFailed = true
+    }
+  }
+
+  toast.success(`${clipboardFailed ? '自动复制失败，' : ''}请复制当前链接：${currentUrl}`, 5000)
 }
 </script>
 
@@ -355,6 +376,35 @@ function goToLeaderboard(id, answerId = null) {
       <div class="card-base p-5 space-y-1">
         <p class="text-sm text-maple-600">答卷榜</p>
         <h2 class="text-xl font-semibold text-text-primary">{{ currentTest.title }}</h2>
+      </div>
+
+      <div v-if="currentLeaderboardResult" class="card-base p-5 space-y-4 border-maple-100 bg-maple-50/60">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0 space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full bg-maple-100 px-3 py-1 text-sm font-semibold text-maple-700">
+                第 {{ currentLeaderboardResult.rank }} 名
+              </span>
+              <span class="rounded-full bg-white px-3 py-1 text-sm font-medium text-text-primary">
+                {{ currentLeaderboardResult.title }}
+              </span>
+            </div>
+            <div>
+              <p class="text-sm text-text-secondary">本次成绩</p>
+              <p class="text-2xl font-semibold text-maple-700">
+                {{ currentLeaderboardResult.score_percent }}%
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-3 sm:items-end">
+            <p class="text-sm text-text-secondary">
+              答对 {{ currentLeaderboardResult.correct_count }}/{{ currentLeaderboardResult.total_count }} 题
+            </p>
+            <button type="button" class="btn-primary px-4 py-2" @click="shareLeaderboardUrl">
+              分享答卷榜
+            </button>
+          </div>
+        </div>
       </div>
 
       <div v-if="!leaderboard?.leaderboard?.results?.length" class="card-base py-12 text-center text-text-secondary">
