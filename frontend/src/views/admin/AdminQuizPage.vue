@@ -1,138 +1,198 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { adminApi } from '@/api/admin'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 
-const questions = ref([])
+const { confirm } = useConfirm()
+
+const activeTab = ref('tests')
+const tests = ref([])
+const submissions = ref([])
+const bankQuestions = ref([])
+const stats = ref(null)
 const loading = ref(true)
+const actingId = ref(null)
+const toast = useToast()
 
-const total = computed(() => questions.value.length)
-const answeredCount = computed(() => questions.value.filter(q => q.has_answer).length)
-const accuracy = computed(() => {
-  if (!answeredCount.value) return 0
-  const correct = questions.value.filter(q => q.is_correct === true).length
-  return Math.round((correct / answeredCount.value) * 100)
-})
+const statCards = computed(() => [
+  { label: '测试总数', value: stats.value?.total_tests ?? 0, icon: 'helpCircle' },
+  { label: '已发布', value: stats.value?.published_tests ?? 0, icon: 'checkCircle' },
+  { label: '答卷总数', value: stats.value?.total_submissions ?? 0, icon: 'clipboardList' },
+  { label: '题库题数', value: stats.value?.question_bank_count ?? 0, icon: 'library' },
+])
 
-onMounted(async () => {
+onMounted(loadAll)
+
+async function loadAll() {
+  loading.value = true
   try {
-    const res = await adminApi.quizQuestions()
-    questions.value = res.data?.results || []
-  } catch { /* ignore */ } finally {
+    const [statsRes, testsRes, submissionsRes, bankRes] = await Promise.all([
+      adminApi.quizStats(),
+      adminApi.quizTests({ page_size: 50 }),
+      adminApi.quizSubmissions({ page_size: 50 }),
+      adminApi.quizQuestionBank({ page_size: 50 }),
+    ])
+    stats.value = statsRes.data
+    tests.value = testsRes.data?.results || []
+    submissions.value = submissionsRes.data?.results || []
+    bankQuestions.value = bankRes.data?.results || []
+  } catch (error) {
+    toast.error(error.response?.data?.message || '问答管理数据加载失败', 5000)
+  } finally {
     loading.value = false
   }
-})
+}
+
+async function deleteTest(test) {
+  const ok = await confirm({
+    title: '删除测试',
+    message: `确认删除《${test.title}》？该操作会将测试软删除。`,
+    confirmText: '删除',
+    variant: 'danger',
+  })
+  if (!ok) return
+  actingId.value = `test-${test.id}`
+  try {
+    await adminApi.deleteQuizTest(test.id)
+    await loadAll()
+  } finally {
+    actingId.value = null
+  }
+}
+
+async function deleteSubmission(submission) {
+  const ok = await confirm({
+    title: '删除答卷',
+    message: `确认删除 ${submission.participant_name} 的答卷？该操作会软删除答卷。`,
+    confirmText: '删除',
+    variant: 'danger',
+  })
+  if (!ok) return
+  actingId.value = `submission-${submission.id}`
+  try {
+    await adminApi.deleteQuizSubmission(submission.id)
+    await loadAll()
+  } finally {
+    actingId.value = null
+  }
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleDateString() : '-'
+}
 </script>
 
 <template>
   <div class="space-y-6 animate-fade-in">
-    <h2 class="page-title">问答管理</h2>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="page-title mb-0">问答管理</h2>
+        <p class="text-sm text-text-secondary mt-1">管理主页测试、答卷和系统题库。</p>
+      </div>
+      <button class="btn-secondary px-4 py-2" :disabled="loading" @click="loadAll">刷新</button>
+    </div>
 
-    <div class="flex gap-4">
-      <div class="card-base flex-1 p-4 flex items-center gap-3">
-        <Icon name="helpCircle" :size="24" class="text-maple-400" />
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div v-for="card in statCards" :key="card.label" class="card-base p-4 flex items-center gap-3">
+        <Icon :name="card.icon" :size="24" class="text-maple-400" />
         <div>
-          <p class="text-xs text-text-secondary">总题数</p>
-          <p class="text-xl font-bold text-text-primary">{{ total }}</p>
-        </div>
-      </div>
-      <div class="card-base flex-1 p-4 flex items-center gap-3">
-        <Icon name="checkCircle" :size="24" class="text-green-400" />
-        <div>
-          <p class="text-xs text-text-secondary">已答数</p>
-          <p class="text-xl font-bold text-text-primary">{{ answeredCount }}</p>
-        </div>
-      </div>
-      <div class="card-base flex-1 p-4 flex items-center gap-3">
-        <Icon name="target" :size="24" class="text-blue-400" />
-        <div>
-          <p class="text-xs text-text-secondary">正确率</p>
-          <p class="text-xl font-bold text-text-primary">{{ accuracy }}%</p>
+          <p class="text-xs text-text-secondary">{{ card.label }}</p>
+          <p class="text-xl font-bold text-text-primary">{{ card.value }}</p>
         </div>
       </div>
     </div>
 
-    <div v-if="loading" class="card-base overflow-hidden">
-      <div class="space-y-0">
-        <div v-for="i in 5" :key="i" class="flex items-center gap-4 px-4 py-3" :class="i > 1 ? 'border-t border-border' : ''">
-          <div class="skeleton h-4 w-8" />
-          <div class="skeleton h-4 w-16" />
-          <div class="skeleton h-4 w-16" />
-          <div class="skeleton h-4 flex-1" />
-          <div class="skeleton h-4 w-12" />
-          <div class="skeleton h-4 w-12" />
-          <div class="skeleton h-4 w-20" />
-        </div>
-      </div>
+    <div class="card-base p-1 flex gap-1">
+      <button class="flex-1 rounded-lg px-4 py-2 text-sm" :class="activeTab === 'tests' ? 'bg-maple-100 text-maple-700 font-medium' : 'text-text-secondary'" @click="activeTab = 'tests'">测试</button>
+      <button class="flex-1 rounded-lg px-4 py-2 text-sm" :class="activeTab === 'submissions' ? 'bg-maple-100 text-maple-700 font-medium' : 'text-text-secondary'" @click="activeTab = 'submissions'">答卷</button>
+      <button class="flex-1 rounded-lg px-4 py-2 text-sm" :class="activeTab === 'bank' ? 'bg-maple-100 text-maple-700 font-medium' : 'text-text-secondary'" @click="activeTab = 'bank'">题库</button>
     </div>
 
-    <div v-else-if="!questions.length" class="card-base p-10 flex flex-col items-center justify-center text-text-secondary gap-3">
-      <Icon name="helpCircle" :size="40" class="text-maple-200" />
-      <p class="text-sm font-medium">暂无数据</p>
-      <p class="text-xs text-text-secondary/60">用户创建的默契问答将显示在此处</p>
+    <div v-if="loading" class="card-base p-5 space-y-3">
+      <div v-for="i in 5" :key="i" class="h-10 skeleton" />
     </div>
 
-    <div v-else class="card-base overflow-hidden overflow-x-auto">
+    <div v-else-if="activeTab === 'tests'" class="card-base overflow-hidden overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="table-header">
           <tr class="bg-maple-50/60 text-text-secondary">
-            <th scope="col" class="text-left px-4 py-3 font-medium">ID</th>
-            <th scope="col" class="text-left px-4 py-3 font-medium">出题人</th>
-            <th scope="col" class="text-left px-4 py-3 font-medium">目标人</th>
-            <th scope="col" class="text-left px-4 py-3 font-medium">题目内容</th>
-            <th scope="col" class="text-left px-4 py-3 font-medium">已答</th>
-            <th scope="col" class="text-left px-4 py-3 font-medium">是否正确</th>
-            <th scope="col" class="text-left px-4 py-3 font-medium">创建时间</th>
+            <th class="text-left px-4 py-3 font-medium">ID</th>
+            <th class="text-left px-4 py-3 font-medium">标题</th>
+            <th class="text-left px-4 py-3 font-medium">主人</th>
+            <th class="text-left px-4 py-3 font-medium">状态</th>
+            <th class="text-left px-4 py-3 font-medium">题目/答卷</th>
+            <th class="text-left px-4 py-3 font-medium">创建时间</th>
+            <th class="text-left px-4 py-3 font-medium">操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="(q, i) in questions"
-            :key="q.id"
-            class="group border-t border-border hover:bg-maple-50/40 transition-colors duration-150 animate-fade-in"
-            :style="{ animationDelay: `${i * 30}ms` }"
-          >
-            <td class="px-4 py-3 text-text-secondary">{{ q.id }}</td>
+          <tr v-for="test in tests" :key="test.id" class="border-t border-border hover:bg-maple-50/40">
+            <td class="px-4 py-3 text-text-secondary">{{ test.id }}</td>
+            <td class="px-4 py-3 font-medium text-text-primary">{{ test.title }}</td>
+            <td class="px-4 py-3 text-maple-600">{{ test.owner?.nickname || test.owner?.username }}</td>
+            <td class="px-4 py-3">{{ test.status }}</td>
+            <td class="px-4 py-3 text-text-secondary">{{ test.question_count }} / {{ test.submission_count }}</td>
+            <td class="px-4 py-3 text-text-secondary whitespace-nowrap">{{ formatDate(test.created_at) }}</td>
             <td class="px-4 py-3">
-              <span class="text-maple-600 font-medium">{{ q.creator?.nickname || '未知' }}</span>
-              <span class="text-text-secondary text-xs ml-1">(#{{ q.creator?.user_id }})</span>
+              <button class="btn-ghost px-3 py-1 text-red-600" :disabled="actingId === `test-${test.id}` || test.status === 'deleted'" @click="deleteTest(test)">删除</button>
             </td>
-            <td class="px-4 py-3">
-              <span class="text-maple-600 font-medium">{{ q.target_user?.nickname || '未知' }}</span>
-              <span class="text-text-secondary text-xs ml-1">(#{{ q.target_user?.user_id }})</span>
-            </td>
-            <td class="px-4 py-3 max-w-xs truncate">{{ q.question }}</td>
-            <td class="px-4 py-3">
-              <span
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                :class="q.has_answer
-                  ? 'bg-green-50 text-green-600'
-                  : 'bg-yellow-50 text-yellow-600'"
-              >
-                <span class="w-1.5 h-1.5 rounded-full" :class="q.has_answer ? 'bg-green-500' : 'bg-yellow-500'" />
-                {{ q.has_answer ? '是' : '否' }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <span
-                v-if="!q.has_answer"
-                class="text-text-secondary text-xs"
-              >-</span>
-              <span
-                v-else
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                :class="q.is_correct
-                  ? 'bg-green-50 text-green-600'
-                  : 'bg-red-50 text-red-600'"
-              >
-                <span class="w-1.5 h-1.5 rounded-full" :class="q.is_correct ? 'bg-green-500' : 'bg-red-500'" />
-                {{ q.is_correct ? '正确' : '错误' }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-text-secondary whitespace-nowrap">{{ new Date(q.created_at).toLocaleDateString() }}</td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <div v-else-if="activeTab === 'submissions'" class="card-base overflow-hidden overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="table-header">
+          <tr class="bg-maple-50/60 text-text-secondary">
+            <th class="text-left px-4 py-3 font-medium">ID</th>
+            <th class="text-left px-4 py-3 font-medium">测试</th>
+            <th class="text-left px-4 py-3 font-medium">参与者</th>
+            <th class="text-left px-4 py-3 font-medium">得分</th>
+            <th class="text-left px-4 py-3 font-medium">提交时间</th>
+            <th class="text-left px-4 py-3 font-medium">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in submissions" :key="item.id" class="border-t border-border hover:bg-maple-50/40">
+            <td class="px-4 py-3 text-text-secondary">{{ item.id }}</td>
+            <td class="px-4 py-3 font-medium text-text-primary">{{ item.test_title }}</td>
+            <td class="px-4 py-3 text-maple-600">{{ item.participant_name }} · {{ item.participant_type }}</td>
+            <td class="px-4 py-3 text-text-secondary">{{ item.score_percent }}% ({{ item.correct_count }}/{{ item.total_count }})</td>
+            <td class="px-4 py-3 text-text-secondary whitespace-nowrap">{{ formatDate(item.created_at) }}</td>
+            <td class="px-4 py-3">
+              <button class="btn-ghost px-3 py-1 text-red-600" :disabled="actingId === `submission-${item.id}` || item.is_deleted" @click="deleteSubmission(item)">删除</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div v-else class="grid gap-4 md:grid-cols-2">
+      <article v-for="question in bankQuestions" :key="question.id" class="card-base p-4 space-y-2">
+        <h3 class="font-medium text-text-primary">{{ question.question_text }}</h3>
+        <p class="text-sm text-text-secondary">{{ question.options?.length || 0 }} 个选项</p>
+      </article>
+      <div v-if="!bankQuestions.length" class="card-base p-10 text-center text-text-secondary md:col-span-2">暂无题库题目</div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Kill all elastic/scale animations on interactive elements */
+button:active,
+input:active,
+select:active,
+textarea:active,
+a:active,
+.card-base:active,
+.btn-primary:active,
+.btn-secondary:active,
+.btn-ghost:active {
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+  transform: none !important;
+}
+</style>

@@ -12,7 +12,7 @@ class TestAccessControl:
     list_endpoints = [
         "users/", "posts/", "comments/", "settings/", "stats/",
         "logs/", "plugins/", "groups/", "anonymous-questions/",
-        "quiz/questions/", "logs/actions/",
+        "quiz/tests/", "logs/actions/",
     ]
 
     detail_patch_endpoints = ["users/1/", "plugins/1/"]
@@ -201,18 +201,19 @@ class TestAnonymousQuestions:
         assert q.id in ids
 
 
-class TestQuizQuestions:
-    """GET /admin/quiz/questions/"""
+class TestQuizTests:
+    """GET /admin/quiz/tests/"""
 
-    def test_list_quiz_questions(self, admin_client, alice, bob):
-        from apps.plugins.quizzes.models import QuizQuestion
-        q = QuizQuestion.objects.create(creator=alice, target_user=bob, question="Like me?")
-        resp = admin_client.get(BASE + "quiz/questions/")
+    def test_list_quiz_tests(self, admin_client, alice):
+        from apps.plugins.quizzes.models import QuizTest
+
+        test = QuizTest.objects.create(owner=alice, title="Acceptance quiz")
+        resp = admin_client.get(BASE + "quiz/tests/")
         assert resp.status_code == status.HTTP_200_OK
         data = resp.data["data"]
         assert data["total"] >= 1
         ids = [r["id"] for r in data["results"]]
-        assert q.id in ids
+        assert test.id in ids
 
 
 class TestGroupListAndDelete:

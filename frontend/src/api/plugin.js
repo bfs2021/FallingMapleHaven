@@ -3,14 +3,21 @@ import client from './client'
 export const pluginApi = {
   getSummary: () => client.get('/plugins/summary/'),
   getProfileCards: (userId) => client.get(`/plugins/profile-cards/${userId}/`),
-  getQuizLeaderboard: () => client.get('/plugins/quiz/leaderboard/'),
 }
 
 export const quizApi = {
-  create: (data) => client.post('/plugins/quiz/questions/', data),
-  received: () => client.get('/plugins/quiz/questions/received/'),
-  answer: (id, answer) => client.post(`/plugins/quiz/questions/${id}/answer/`, { answer }),
-  result: (friendId) => client.get(`/plugins/quiz/result/${friendId}/`),
+  publicTests: (ownerId, params) => client.get(`/plugins/quiz/users/${ownerId}/tests/`, { params }),
+  myTests: (params) => client.get('/plugins/quiz/my/tests/', { params }),
+  createTest: (data) => client.post('/plugins/quiz/my/tests/', data),
+  myTestDetail: (testId) => client.get(`/plugins/quiz/my/tests/${testId}/`),
+  updateDraftTest: (testId, data) => client.patch(`/plugins/quiz/my/tests/${testId}/`, data),
+  publishTest: (testId) => client.post(`/plugins/quiz/my/tests/${testId}/publish/`, {}),
+  deleteTest: (testId) => client.delete(`/plugins/quiz/my/tests/${testId}/`),
+  publicTestDetail: (testId) => client.get(`/plugins/quiz/tests/${testId}/`),
+  submitTest: (testId, data) => client.post(`/plugins/quiz/tests/${testId}/submissions/`, data),
+  leaderboard: (testId, params) => client.get(`/plugins/quiz/tests/${testId}/leaderboard/`, { params }),
+  mySubmissions: (params) => client.get('/plugins/quiz/my/submissions/', { params }),
+  questionBank: (params) => client.get('/plugins/quiz/question-bank/', { params }),
 }
 
 export const questionBoxApi = {

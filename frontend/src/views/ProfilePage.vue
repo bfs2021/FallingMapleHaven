@@ -119,7 +119,8 @@ function onTabChange(tab) {
 }
 
 function goToPlugin(plugin) {
-  router.push(authStore.isAuthenticated ? plugin.route : `/login?next=${plugin.route}`)
+  const publicPlugins = new Set(['quiz', 'guestbook'])
+  router.push(authStore.isAuthenticated || publicPlugins.has(plugin.type) ? plugin.route : `/login?next=${plugin.route}`)
 }
 
 const showAdminPanel = ref(false)

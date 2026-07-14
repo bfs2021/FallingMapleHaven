@@ -10,7 +10,7 @@ class Notification(models.Model):
         COMMENT = "comment", "评论"
         LIKE = "like", "点赞"
         REPLY = "reply", "回复"
-        QUIZ_INVITE = "quiz_invite", "默契问答邀请"
+        PLUGIN_EVENT = "plugin_event", "插件动态"
         ANONYMOUS_QUESTION = "anonymous_question", "匿名提问"
         GROUP_JOIN_REQUEST = "group_join_request", "加入小组申请"
         GROUP_REQUEST_APPROVED = "group_request_approved", "加入申请通过"

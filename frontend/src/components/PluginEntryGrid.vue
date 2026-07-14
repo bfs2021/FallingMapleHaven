@@ -33,10 +33,10 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
       <div v-if="plugin.data" class="w-full space-y-0.5">
         <template v-if="plugin.type === 'quiz'">
           <p class="text-lg font-bold text-maple-600 leading-tight">
-            {{ plugin.data.match_score ?? plugin.data.avg_match_rate ?? '—' }}%
+            {{ plugin.data.published_test_count ?? 0 }}
           </p>
           <p class="text-tag text-text-secondary leading-tight">
-            {{ plugin.data.total_questions ?? plugin.data.friend_count ?? 0 }} 题
+            套测试
           </p>
         </template>
         <template v-else-if="plugin.type === 'question_box'">

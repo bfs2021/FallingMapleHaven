@@ -104,10 +104,7 @@ onMounted(fetchPlugins)
           <template v-if="plugin.type === 'quiz'">
             <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
               <span class="text-maple-600 font-medium">
-                匹配度 {{ plugin.data.avg_match_rate || 0 }}%
-              </span>
-              <span v-if="plugin.data.best_friend_name" class="text-text-secondary">
-                最佳: {{ plugin.data.best_friend_name }} ({{ plugin.data.best_match_rate }}%)
+                已发布 {{ plugin.data.published_test_count || 0 }} 套测试
               </span>
             </div>
           </template>

@@ -27,9 +27,24 @@ const routes = [
   },
   {
     path: '/profile/:userId/plugins/quiz',
-    name: 'Quiz',
+    name: 'QuizPage',
     component: () => import('@/views/QuizPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/quiz/tests/:testId',
+    name: 'QuizTestDetail',
+    component: () => import('@/views/QuizPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/quiz/tests/:testId/edit',
+    name: 'QuizTestEditor',
+    component: () => import('@/views/QuizTestEditorPage.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/profile/:userId/plugins/quiz/tests/:testId/leaderboard',
+    name: 'QuizTestLeaderboard',
+    component: () => import('@/views/QuizPage.vue'),
   },
   {
     path: '/profile/:userId/plugins/question-box',

@@ -116,11 +116,12 @@ class TestProfilePluginCardsView:
         assert "quiz" not in types
         assert "guestbook" in types
 
-    def test_excludes_plugins_returning_none(self, alice_client, alice, bob):
+    def test_quiz_card_is_entry_even_without_published_tests(self, alice_client, alice, bob):
         url = _profile_cards_url(bob.pk)
         resp = alice_client.get(url)
-        types = {c["type"] for c in resp.json()["data"]}
-        assert "quiz" not in types
+        cards = {c["type"]: c for c in resp.json()["data"]}
+        assert cards["quiz"]["route"] == f"/profile/{bob.pk}/plugins/quiz"
+        assert cards["quiz"]["data"]["published_test_count"] == 0
 
     def test_guestbook_count(self, alice_client, alice, bob, bob_client):
         from apps.profiles.models import GuestbookEntry, UserProfile

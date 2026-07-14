@@ -1,325 +1,238 @@
 import pytest
 from django.urls import reverse
-from apps.friends.models import Friendship
+
 from apps.notifications.models import Notification
 from apps.plugins.models import Plugin
-from apps.plugins.quizzes.models import QuizQuestion, QuizAnswer, QuizResult
+from apps.plugins.quizzes.models import (
+    QuizSubmission,
+    QuizSubmissionAnswer,
+    QuizTest,
+    QuizTestOption,
+    QuizTestQuestion,
+)
 
 
 @pytest.fixture(autouse=True)
 def _active_plugin(db):
-    Plugin.objects.get_or_create(plugin_type="quiz", defaults={"name": "默契问答", "is_active": True})
+    Plugin.objects.update_or_create(
+        plugin_type="quiz",
+        defaults={"name": "默契问答", "is_active": True},
+    )
 
 
 def _url(name, *args):
     return reverse(f"quiz-{name}", args=args)
 
 
-class TestQuizQuestionCreateView:
-    url = _url("create")
+def _question_payload(index, correct_order=1):
+    return {
+        "question_text": f"第 {index} 题更像哪一种日常？",
+        "order": index,
+        "correct_option_order": correct_order,
+        "options": [
+            {"option_text": f"选项 {index}-A", "order": 1},
+            {"option_text": f"选项 {index}-B", "order": 2},
+        ],
+    }
 
-    def test_create_for_friend(self, alice_client, alice, bob, friendship):
-        resp = alice_client.post(self.url, {
-            "target_user_id": bob.id,
-            "question": "What is my favorite color?",
-            "correct_answer": "blue",
-        })
+
+def _test_payload(title="我的默契测试", count=10):
+    return {
+        "title": title,
+        "questions": [_question_payload(index) for index in range(1, count + 1)],
+    }
+
+
+def _answer_payload(test, correct=True):
+    answers = []
+    for question in test.questions.order_by("order"):
+        option = question.correct_option if correct else question.options.exclude(pk=question.correct_option_id).first()
+        answers.append({"question_id": question.id, "selected_option_id": option.id})
+    return {"answers": answers}
+
+
+@pytest.fixture
+def published_test(alice_client):
+    create_resp = alice_client.post(_url("my-tests"), _test_payload(), format="json")
+    test_id = create_resp.json()["data"]["id"]
+    publish_resp = alice_client.post(_url("publish-test", test_id))
+    assert publish_resp.status_code == 200
+    return QuizTest.objects.get(pk=test_id)
+
+
+class TestQuizOwnerTests:
+    def test_create_draft_allows_less_than_ten_questions(self, alice_client, alice):
+        resp = alice_client.post(_url("my-tests"), _test_payload(count=2), format="json")
+
         assert resp.status_code == 201
-        data = resp.json()
-        assert data["code"] == 0
-        assert QuizQuestion.objects.filter(creator=alice, target_user=bob).exists()
+        data = resp.json()["data"]
+        assert data["status"] == QuizTest.Status.DRAFT
+        assert data["question_count"] == 2
+        assert QuizTest.objects.filter(owner=alice, title="我的默契测试").exists()
 
-    def test_creates_notification(self, alice_client, bob, friendship):
-        alice_client.post(self.url, {
-            "target_user_id": bob.id,
-            "question": "Q?", "correct_answer": "A",
-        })
+    def test_owner_max_three_non_deleted_tests(self, alice_client):
+        for index in range(3):
+            resp = alice_client.post(_url("my-tests"), _test_payload(title=f"测试 {index}"), format="json")
+            assert resp.status_code == 201
+
+        resp = alice_client.post(_url("my-tests"), _test_payload(title="第四套"), format="json")
+
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40005
+
+    def test_non_owner_get_detail_returns_permission_error(self, bob_client, published_test):
+        resp = bob_client.get(_url("my-test-detail", published_test.id))
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == 40003
+
+    def test_delete_is_soft_delete(self, alice_client, published_test):
+        resp = alice_client.delete(_url("my-test-detail", published_test.id))
+
+        assert resp.status_code == 200
+        published_test.refresh_from_db()
+        assert published_test.status == QuizTest.Status.DELETED
+        assert published_test.deleted_at is not None
+
+
+class TestQuizPublish:
+    def test_publish_requires_exactly_ten_questions(self, alice_client):
+        create_resp = alice_client.post(_url("my-tests"), _test_payload(count=2), format="json")
+        test_id = create_resp.json()["data"]["id"]
+
+        resp = alice_client.post(_url("publish-test", test_id))
+
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40001
+        assert resp.json()["data"]["errors"][0]["field"] == "questions"
+
+    def test_publish_success_sets_published_status(self, alice_client):
+        create_resp = alice_client.post(_url("my-tests"), _test_payload(), format="json")
+        test_id = create_resp.json()["data"]["id"]
+
+        resp = alice_client.post(_url("publish-test", test_id))
+
+        assert resp.status_code == 200
+        test = QuizTest.objects.get(pk=test_id)
+        assert test.status == QuizTest.Status.PUBLISHED
+        assert test.published_at is not None
+
+    def test_published_test_cannot_edit_questions(self, alice_client, published_test):
+        resp = alice_client.patch(
+            _url("my-test-detail", published_test.id),
+            {"questions": [_question_payload(1)]},
+            format="json",
+        )
+
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40005
+
+
+class TestQuizPublicDetail:
+    def test_public_detail_does_not_expose_standard_answers(self, client, published_test):
+        resp = client.get(_url("public-test-detail", published_test.id))
+
+        assert resp.status_code == 200
+        question = resp.json()["data"]["questions"][0]
+        assert "correct_option_id" not in question
+        assert resp.cookies.get("fmh_visitor_id") is not None
+
+    def test_public_list_marks_logged_in_submission(self, bob_client, bob, published_test):
+        bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+
+        resp = bob_client.get(_url("public-tests", published_test.owner_id))
+
+
+        assert resp.status_code == 200
+        item = resp.json()["data"]["results"][0]
+        assert item["has_submitted"] is True
+
+
+class TestQuizSubmit:
+    def test_logged_in_user_submit_creates_submission_answers_and_notification(self, bob_client, bob, alice, published_test):
+        resp = bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+
+        assert resp.status_code == 201
+        data = resp.json()["data"]
+        assert data["submission"]["participant_name"] == bob.nickname
+        assert data["submission"]["correct_count"] == 10
+        assert data["submission"]["score_percent"] == 100.0
+        submission = QuizSubmission.objects.get(pk=data["submission"]["id"])
+        assert QuizSubmissionAnswer.objects.filter(submission=submission).count() == 10
         assert Notification.objects.filter(
-            recipient=bob,
-            notification_type=Notification.Type.QUIZ_INVITE,
+            recipient=alice,
+            sender=bob,
+            notification_type=Notification.Type.PLUGIN_EVENT,
         ).exists()
 
-    def test_cannot_create_for_non_friend(self, alice_client, charlie):
-        resp = alice_client.post(self.url, {
-            "target_user_id": charlie.id,
-            "question": "Q?", "correct_answer": "A",
-        })
-        assert resp.status_code == 400
+    def test_visitor_submit_sets_cookie_and_does_not_create_notification(self, client, alice, published_test):
+        payload = _answer_payload(published_test, correct=False)
+        payload["participant_name"] = "访客"
 
-    def test_cannot_create_for_self(self, alice_client, alice):
-        resp = alice_client.post(self.url, {
-            "target_user_id": alice.id,
-            "question": "Q?", "correct_answer": "A",
-        })
-        assert resp.status_code == 400
+        resp = client.post(_url("submit-test", published_test.id), payload, format="json")
 
-    def test_non_existent_target(self, alice_client):
-        resp = alice_client.post(self.url, {
-            "target_user_id": 99999,
-            "question": "Q?", "correct_answer": "A",
-        })
-        assert resp.status_code == 400
-
-    def test_missing_fields(self, alice_client, bob, friendship):
-        resp = alice_client.post(self.url, {"target_user_id": bob.id})
-        assert resp.status_code == 400
-
-        resp = alice_client.post(self.url, {"question": "Q?"})
-        assert resp.status_code == 400
-
-    def test_requires_auth(self, client, bob, friendship):
-        resp = client.post(self.url, {
-            "target_user_id": bob.id, "question": "Q?", "correct_answer": "A",
-        })
-        assert resp.status_code == 403
-
-    def test_inactive_plugin(self, alice_client, bob, friendship):
-        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
-        resp = alice_client.post(self.url, {
-            "target_user_id": bob.id, "question": "Q?", "correct_answer": "A",
-        })
-        assert resp.status_code == 404
-
-
-class TestQuizReceivedQuestionsView:
-    url = _url("received")
-
-    def test_empty_when_no_questions(self, alice_client):
-        resp = alice_client.get(self.url)
-        assert resp.status_code == 200
-        assert resp.json()["data"]["total"] == 0
-
-    def test_lists_received_questions(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="A")
-        resp = alice_client.get(self.url)
-        ids = [item["id"] for item in resp.json()["data"]["results"]]
-        assert q.id in ids
-
-    def test_does_not_include_own_questions(self, alice_client, alice, bob, friendship):
-        QuizQuestion.objects.create(creator=alice, target_user=bob, question="Q?", correct_answer="A")
-        resp = alice_client.get(self.url)
-        assert resp.json()["data"]["total"] == 0
-
-    def test_default_filters_unanswered(self, alice_client, alice, bob, friendship):
-        q1 = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q1", correct_answer="A")
-        q2 = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q2", correct_answer="B")
-        QuizAnswer.objects.create(question=q2, answerer=alice, answer="B", is_correct=True)
-        resp = alice_client.get(self.url)
-        ids = [item["id"] for item in resp.json()["data"]["results"]]
-        assert q1.id in ids
-        assert q2.id not in ids
-
-    def test_filter_answered(self, alice_client, alice, bob, friendship):
-        q1 = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q1", correct_answer="A")
-        QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q2", correct_answer="B")
-        QuizAnswer.objects.create(question=q1, answerer=alice, answer="A", is_correct=True)
-        resp = alice_client.get(self.url, {"answered": "true"})
-        ids = [item["id"] for item in resp.json()["data"]["results"]]
-        assert q1.id in ids
-        assert len(ids) == 1
-
-    def test_pagination(self, alice_client, alice, bob, friendship):
-        for i in range(25):
-            QuizQuestion.objects.create(creator=bob, target_user=alice, question=f"Q{i}", correct_answer="A")
-        resp = alice_client.get(self.url, {"page_size": 10, "page": 2})
-        assert resp.json()["data"]["page"] == 2
-        assert len(resp.json()["data"]["results"]) == 10
-
-    def test_requires_auth(self, client):
-        resp = client.get(self.url)
-        assert resp.status_code == 403
-
-    def test_inactive_plugin(self, alice_client):
-        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
-        resp = alice_client.get(self.url)
-        assert resp.status_code == 404
-
-    def test_response_has_from_user_info(self, alice_client, alice, bob, friendship):
-        QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="A")
-        resp = alice_client.get(self.url)
-        item = resp.json()["data"]["results"][0]
-        assert "from_user" in item
-        assert item["from_user"]["user_id"] == bob.id
-        assert "nickname" in item["from_user"]
-
-
-class TestQuizAnswerView:
-    def test_answer_correct(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="right")
-        resp = alice_client.post(_url("answer", q.id), {"answer": "right"})
         assert resp.status_code == 201
-        data = resp.json()
-        assert data["data"]["is_correct"] is True
-        assert data["data"]["correct_answer"] == "right"
+        assert resp.cookies.get("fmh_visitor_id") is not None
+        submission = QuizSubmission.objects.get(pk=resp.json()["data"]["submission"]["id"])
+        assert submission.participant_type == QuizSubmission.ParticipantType.VISITOR
+        assert submission.visitor_token_hash
+        assert submission.visitor_token_hash != resp.cookies["fmh_visitor_id"].value
+        assert not Notification.objects.filter(recipient=alice).exists()
 
-    def test_answer_wrong(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="right")
-        resp = alice_client.post(_url("answer", q.id), {"answer": "wrong"})
-        assert resp.status_code == 201
-        assert resp.json()["data"]["is_correct"] is False
+    def test_duplicate_logged_in_submit_is_rejected(self, bob_client, published_test):
+        bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
 
-    def test_cannot_answer_own_question(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=alice, target_user=bob, question="Q?", correct_answer="A")
-        resp = alice_client.post(_url("answer", q.id), {"answer": "A"})
-        assert resp.status_code == 404
+        resp = bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
 
-    def test_already_answered(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="A")
-        QuizAnswer.objects.create(question=q, answerer=alice, answer="A", is_correct=True)
-        resp = alice_client.post(_url("answer", q.id), {"answer": "A"})
         assert resp.status_code == 400
-        assert "已作答" in resp.json()["message"]
+        assert resp.json()["code"] == 40005
+        assert "leaderboard_url" in resp.json()["data"]
 
-    def test_non_existent_question(self, alice_client):
-        resp = alice_client.post(_url("answer", 99999), {"answer": "test"})
-        assert resp.status_code == 404
+    def test_owner_cannot_submit_own_test(self, alice_client, published_test):
+        resp = alice_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
 
-    def test_requires_auth(self, client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="A")
-        resp = client.post(_url("answer", q.id), {"answer": "A"})
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40005
+
+    def test_admin_cannot_submit_test(self, admin_client, published_test):
+        resp = admin_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+
         assert resp.status_code == 403
+        assert resp.json()["code"] == 40003
 
-    def test_inactive_plugin(self, alice_client, alice, bob, friendship):
-        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="A")
-        resp = alice_client.post(_url("answer", q.id), {"answer": "A"})
-        assert resp.status_code == 404
+    def test_invalid_answer_option_is_rejected(self, bob_client, published_test):
+        payload = _answer_payload(published_test)
+        other_question = QuizTestQuestion.objects.create(test=published_test, question_text="其他", order=99)
+        other_option = QuizTestOption.objects.create(question=other_question, option_text="其他选项", order=1)
+        payload["answers"][0]["selected_option_id"] = other_option.id
+        other_question.delete()
 
-    def test_creates_quizresult(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="right")
-        alice_client.post(_url("answer", q.id), {"answer": "right"})
-        result = QuizResult.objects.filter(
-            user_a=alice, user_b=bob
-        ).first()
-        assert result is not None
+        resp = bob_client.post(_url("submit-test", published_test.id), payload, format="json")
 
-    def test_match_score_after_both_answer(self, alice_client, bob_client, alice, bob, friendship):
-        q1 = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q1", correct_answer="A")
-        QuizAnswer.objects.create(question=q1, answerer=alice, answer="A", is_correct=True)
-        q2 = QuizQuestion.objects.create(creator=alice, target_user=bob, question="Q2", correct_answer="B")
-        resp = bob_client.post(_url("answer", q2.id), {"answer": "B"})
-        assert resp.status_code == 201
-        result = QuizResult.objects.get(user_a=alice, user_b=bob)
-        assert result.total_questions == 2
-        assert result.correct_count == 2
-        assert result.match_score == 100.0
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40001
 
 
-class TestQuizQuestionDeleteView:
-    def test_creator_can_delete(self, alice_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=alice, target_user=bob, question="Q?", correct_answer="A")
-        resp = alice_client.delete(_url("delete", q.id))
+class TestQuizLeaderboard:
+    def test_leaderboard_is_per_test_and_uses_tied_rank(self, bob_client, charlie_client, bob, charlie, published_test):
+        bob_resp = bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+        charlie_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+
+        resp = bob_client.get(_url("test-leaderboard", published_test.id), {"answerId": bob_resp.json()["data"]["submission"]["id"]})
+
         assert resp.status_code == 200
-        assert not QuizQuestion.objects.filter(id=q.id).exists()
+        rows = resp.json()["data"]["leaderboard"]["results"]
+        assert [row["rank"] for row in rows] == [1, 1]
+        assert all(row["is_tied"] for row in rows)
+        assert any(row["is_current"] for row in rows)
+        assert {row["participant_name"] for row in rows} == {bob.nickname, charlie.nickname}
+        assert "correct_option_id" not in rows[0]
 
-    def test_others_cannot_delete(self, alice_client, bob_client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=bob, target_user=alice, question="Q?", correct_answer="A")
-        resp = alice_client.delete(_url("delete", q.id))
-        assert resp.status_code == 404
-        assert QuizQuestion.objects.filter(id=q.id).exists()
+    def test_leaderboard_sorts_by_score_desc(self, bob_client, charlie_client, published_test):
+        bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test, correct=False), format="json")
+        charlie_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
 
-    def test_non_existent(self, alice_client):
-        resp = alice_client.delete(_url("delete", 99999))
-        assert resp.status_code == 404
+        resp = bob_client.get(_url("test-leaderboard", published_test.id))
 
-    def test_requires_auth(self, client, alice, bob, friendship):
-        q = QuizQuestion.objects.create(creator=alice, target_user=bob, question="Q?", correct_answer="A")
-        resp = client.delete(_url("delete", q.id))
-        assert resp.status_code == 403
-
-    def test_inactive_plugin(self, alice_client, alice, bob, friendship):
-        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
-        q = QuizQuestion.objects.create(creator=alice, target_user=bob, question="Q?", correct_answer="A")
-        resp = alice_client.delete(_url("delete", q.id))
-        assert resp.status_code == 404
-
-
-class TestQuizResultView:
-    def test_get_result(self, alice_client, bob_client, alice, bob, friendship):
-        QuizResult.objects.create(
-            user_a=alice, user_b=bob, total_questions=5, correct_count=4, match_score=80.0
-        )
-        resp = alice_client.get(_url("result", bob.id))
-        assert resp.status_code == 200
-        data = resp.json()["data"]
-        assert float(data["match_score"]) == 80.0
-        assert data["total_questions"] == 5
-
-    def test_friend_id_in_response(self, alice_client, bob_client, alice, bob, friendship):
-        QuizResult.objects.create(user_a=alice, user_b=bob, match_score=50.0)
-        resp = alice_client.get(_url("result", bob.id))
-        assert resp.json()["data"]["friend_id"] == bob.id
-
-        resp = bob_client.get(_url("result", alice.id))
-        assert resp.json()["data"]["friend_id"] == alice.id
-
-    def test_no_result(self, alice_client, bob, friendship):
-        resp = alice_client.get(_url("result", bob.id))
-        assert resp.status_code == 404
-        assert resp.json()["code"] == 40004
-
-    def test_requires_auth(self, client, alice, bob, friendship):
-        QuizResult.objects.create(user_a=alice, user_b=bob, match_score=50.0)
-        resp = client.get(_url("result", bob.id))
-        assert resp.status_code == 403
-
-    def test_inactive_plugin(self, alice_client, bob, friendship):
-        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
-        resp = alice_client.get(_url("result", bob.id))
-        assert resp.status_code == 404
-
-
-class TestQuizLeaderboardView:
-    url = _url("leaderboard")
-
-    def test_returns_rankings(self, alice_client, alice, bob, friendship):
-        QuizResult.objects.create(user_a=alice, user_b=bob, total_questions=10, correct_count=8, match_score=80.0)
-        resp = alice_client.get(self.url)
-        assert resp.status_code == 200
-        data = resp.json()["data"]
-        assert len(data["rankings"]) == 1
-        rank = data["rankings"][0]
-        assert rank["friend_id"] == bob.id
-        assert rank["nickname"] == bob.nickname
-        assert rank["match_score"] == 80.0
-        assert rank["total_questions"] == 10
-        assert rank["rank"] == 1
-
-    def test_avg_match_rate(self, alice_client, alice, bob, charlie, friendship):
-        Friendship.objects.create(from_user=alice, to_user=charlie, status="accepted")
-        QuizResult.objects.create(user_a=alice, user_b=bob, match_score=90.0)
-        QuizResult.objects.create(user_a=alice, user_b=charlie, match_score=70.0)
-        resp = alice_client.get(self.url)
-        assert resp.json()["data"]["avg_match_rate"] == 80.0
-
-    def test_excludes_non_friend_results(self, alice_client, alice, bob, charlie, friendship):
-        QuizResult.objects.create(user_a=alice, user_b=bob, match_score=90.0)
-        QuizResult.objects.create(user_a=alice, user_b=charlie, match_score=70.0)
-        resp = alice_client.get(self.url)
-        assert len(resp.json()["data"]["rankings"]) == 1
-        assert resp.json()["data"]["total_friends"] == 1
-
-    def test_empty_returns_zero(self, alice_client):
-        resp = alice_client.get(self.url)
-        assert resp.status_code == 200
-        data = resp.json()["data"]
-        assert data["rankings"] == []
-        assert data["avg_match_rate"] == 0
-        assert data["total_friends"] == 0
-
-    def test_sorted_by_score_desc(self, alice_client, alice, bob, charlie, friendship):
-        Friendship.objects.create(from_user=alice, to_user=charlie, status="accepted")
-        QuizResult.objects.create(user_a=alice, user_b=bob, match_score=80.0)
-        QuizResult.objects.create(user_a=alice, user_b=charlie, match_score=95.0)
-        resp = alice_client.get(self.url)
-        scores = [r["match_score"] for r in resp.json()["data"]["rankings"]]
-        assert scores == [95.0, 80.0]
-
-    def test_requires_auth(self, client):
-        resp = client.get(self.url)
-        assert resp.status_code == 403
-
-    def test_inactive_plugin(self, alice_client):
-        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
-        resp = alice_client.get(self.url)
-        assert resp.status_code == 404
+        scores = [row["score_percent"] for row in resp.json()["data"]["leaderboard"]["results"]]
+        assert scores == [100.0, 0.0]
