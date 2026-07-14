@@ -272,6 +272,21 @@ class TestQuizLeaderboard:
         assert "correct_option_id" not in rows[0]
         assert "selected_option_id" not in rows[0]
 
+    def test_leaderboard_answer_id_must_belong_to_current_user(self, bob_client, charlie_client, bob, charlie, published_test):
+        bob_resp = bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")
+        charlie_resp = charlie_client.post(_url("submit-test", published_test.id), _answer_payload(published_test, correct=False), format="json")
+        bob_submission_id = bob_resp.json()["data"]["submission"]["id"]
+        charlie_submission_id = charlie_resp.json()["data"]["submission"]["id"]
+
+        resp = charlie_client.get(_url("test-leaderboard", published_test.id), {"answerId": bob_submission_id})
+
+        assert resp.status_code == 200
+        rows = resp.json()["data"]["leaderboard"]["results"]
+        current_rows = [row for row in rows if row["is_current"]]
+        assert len(current_rows) == 1
+        assert current_rows[0]["id"] == charlie_submission_id
+        assert current_rows[0]["participant_name"] == charlie.nickname
+
     def test_leaderboard_sorts_by_score_desc(self, bob_client, charlie_client, published_test):
         bob_client.post(_url("submit-test", published_test.id), _answer_payload(published_test, correct=False), format="json")
         charlie_client.post(_url("submit-test", published_test.id), _answer_payload(published_test), format="json")

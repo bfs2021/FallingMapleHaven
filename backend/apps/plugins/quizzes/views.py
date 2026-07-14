@@ -105,20 +105,31 @@ def _title_for_score(correct_count):
 
 def _current_submission_for_request(request, test, answer_id=None):
     submissions = QuizSubmission.objects.filter(test=test, is_deleted=False)
+    current_id = None
     if answer_id:
         try:
-            return submissions.get(pk=answer_id)
-        except (QuizSubmission.DoesNotExist, ValueError, TypeError):
-            return None
+            current_id = int(answer_id)
+        except (TypeError, ValueError):
+            current_id = None
     if request.user.is_authenticated:
-        return submissions.filter(user=request.user, participant_type=QuizSubmission.ParticipantType.USER).first()
+        own_submissions = submissions.filter(user=request.user, participant_type=QuizSubmission.ParticipantType.USER)
+        if current_id:
+            current = own_submissions.filter(pk=current_id).first()
+            if current:
+                return current
+        return own_submissions.first()
     token = request.COOKIES.get(VISITOR_COOKIE_NAME)
     if not token:
         return None
-    return submissions.filter(
+    own_submissions = submissions.filter(
         visitor_token_hash=_hash_visitor_token(token),
         participant_type=QuizSubmission.ParticipantType.VISITOR,
-    ).first()
+    )
+    if current_id:
+        current = own_submissions.filter(pk=current_id).first()
+        if current:
+            return current
+    return own_submissions.first()
 
 
 def _submission_context_for_tests(request, tests):
