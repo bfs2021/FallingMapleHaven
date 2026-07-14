@@ -210,22 +210,41 @@ function goToLeaderboard(id, answerId = null) {
   })
 }
 
-async function shareLeaderboardUrl() {
+function buildAbsoluteQuizUrl(id, suffix = '') {
   if (typeof window === 'undefined') return
 
-  const currentUrl = window.location.href
+  return `${window.location.origin}/profile/${ownerId.value}/plugins/quiz/tests/${id}${suffix}`
+}
+
+async function copyShareUrl(url, successMessage) {
+  if (!url) return
+
   let clipboardFailed = false
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     try {
-      await navigator.clipboard.writeText(currentUrl)
-      toast.success('答卷榜链接已复制')
+      await navigator.clipboard.writeText(url)
+      toast.success(successMessage)
       return
     } catch {
       clipboardFailed = true
     }
   }
 
-  toast.success(`${clipboardFailed ? '自动复制失败，' : ''}请复制当前链接：${currentUrl}`, 5000)
+  toast.success(`${clipboardFailed ? '自动复制失败，' : ''}请复制链接：${url}`, 5000)
+}
+
+async function shareTestUrl(id) {
+  await copyShareUrl(buildAbsoluteQuizUrl(id), '答题链接已复制')
+}
+
+async function shareLeaderboardUrl(id = testId.value) {
+  await copyShareUrl(buildAbsoluteQuizUrl(id, '/leaderboard'), '答卷榜链接已复制')
+}
+
+async function shareCurrentResultUrl() {
+  const answerId = Array.isArray(route.query.answerId) ? route.query.answerId[0] : route.query.answerId
+  const query = answerId ? `?answerId=${encodeURIComponent(answerId)}` : ''
+  await copyShareUrl(buildAbsoluteQuizUrl(testId.value, `/leaderboard${query}`), '我的成绩链接已复制')
 }
 </script>
 
@@ -319,6 +338,15 @@ async function shareLeaderboardUrl() {
             </button>
             <button v-else class="btn-secondary px-4 py-2" @click="goToLeaderboard(test.id)">
               榜单
+            </button>
+            <button
+              v-if="test.status !== 'draft'"
+              class="btn-secondary col-span-2 px-4 py-2 inline-flex items-center justify-center gap-2"
+              type="button"
+              @click="shareTestUrl(test.id)"
+            >
+              <Icon name="share2" :size="16" />
+              复制答题链接
             </button>
             <button class="btn-ghost col-span-2 px-4 py-2 text-red-600" :disabled="actingId === test.id" @click="deleteTest(test)">
               删除测试
@@ -431,9 +459,19 @@ async function shareLeaderboardUrl() {
     </template>
 
     <template v-else-if="currentTest && isLeaderboardRoute">
-      <div class="card-base p-5 space-y-1">
-        <p class="text-sm text-maple-600">答卷榜</p>
-        <h2 class="text-xl font-semibold text-text-primary">{{ currentTest.title }}</h2>
+      <div class="card-base p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="space-y-1">
+          <p class="text-sm text-maple-600">答卷榜</p>
+          <h2 class="text-xl font-semibold text-text-primary">{{ currentTest.title }}</h2>
+        </div>
+        <button
+          type="button"
+          class="btn-secondary px-4 py-2 inline-flex items-center justify-center gap-2"
+          @click="shareLeaderboardUrl()"
+        >
+          <Icon name="share2" :size="16" />
+          分享答卷榜
+        </button>
       </div>
 
       <div v-if="currentLeaderboardResult" class="card-base p-5 space-y-4 border-maple-100 bg-maple-50/60">
@@ -458,8 +496,8 @@ async function shareLeaderboardUrl() {
             <p class="text-sm text-text-secondary">
               答对 {{ currentLeaderboardResult.correct_count }}/{{ currentLeaderboardResult.total_count }} 题
             </p>
-            <button type="button" class="btn-primary px-4 py-2" @click="shareLeaderboardUrl">
-              分享答卷榜
+            <button type="button" class="btn-primary px-4 py-2" @click="shareCurrentResultUrl">
+              分享我的成绩
             </button>
           </div>
         </div>
