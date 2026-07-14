@@ -44,6 +44,44 @@ const filteredBankQuestions = computed(() => {
   if (!selectedBankCategory.value) return bankQuestions.value
   return bankQuestions.value.filter((question) => question.tags?.includes(selectedBankCategory.value))
 })
+const normalizedPublishErrors = computed(() => publishErrors.value.map((error) => ({
+  field: typeof error?.field === 'string' ? error.field : '',
+  message: error?.message || '校验失败',
+})))
+const globalPublishErrors = computed(() => normalizedPublishErrors.value.filter((error) => {
+  return !/^questions\.\d+(?:\.|$)/.test(error.field)
+}))
+const questionPublishErrorMap = computed(() => {
+  const buckets = new Map()
+
+  normalizedPublishErrors.value.forEach((error) => {
+    const match = /^questions\.(\d+)(?:\.(.+))?$/.exec(error.field)
+    if (!match) return
+
+    const questionIndex = Number(match[1])
+    const field = (match[2] || '').toLowerCase()
+    const bucket = buckets.get(questionIndex) || {
+      general: [],
+      questionText: [],
+      options: [],
+      correctOption: [],
+    }
+
+    if (!field || field === 'question_text' || field === 'question') {
+      bucket.questionText.push(error.message)
+    } else if (field === 'correct_option' || field === 'correct_option_order') {
+      bucket.correctOption.push(error.message)
+    } else if (field.startsWith('options')) {
+      bucket.options.push(error.message)
+    } else {
+      bucket.general.push(error.message)
+    }
+
+    buckets.set(questionIndex, bucket)
+  })
+
+  return buckets
+})
 
 
 
@@ -194,6 +232,7 @@ async function saveDraft({ quiet = false } = {}) {
   try {
     const res = await quizApi.updateDraftTest(testId.value, buildPayload())
     loadForm(res.data)
+    publishErrors.value = []
     if (!quiet) toast.success('草稿已保存')
     return true
   } catch (error) {
@@ -213,6 +252,7 @@ async function publishTest() {
     if (!saved) return
     const res = await quizApi.publishTest(testId.value)
     loadForm(res.data)
+    publishErrors.value = []
     toast.success('发布成功')
   } catch (error) {
     toast.error(error.response?.data?.message || '发布失败', 5000)
@@ -253,6 +293,23 @@ function backToList() {
     </div>
 
     <template v-else>
+      <div v-if="publishErrors.length" class="card-base border border-red-200 bg-red-50/70 p-4">
+        <div class="flex items-start gap-3">
+          <Icon name="alertCircle" :size="18" class="mt-0.5 shrink-0 text-red-600" />
+          <div class="min-w-0 space-y-2">
+            <p class="text-sm font-semibold text-red-700">提交前校验未通过</p>
+            <div v-if="globalPublishErrors.length" class="space-y-1 text-sm text-red-700">
+              <p v-for="(error, index) in globalPublishErrors" :key="`${error.message}-${index}`" class="leading-5">
+                {{ error.message }}
+              </p>
+            </div>
+            <p v-if="Array.from(questionPublishErrorMap.keys()).length" class="text-xs text-red-600">
+              第 {{ Array.from(questionPublishErrorMap.keys()).map((index) => index + 1).join('、') }} 题存在字段错误
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <main class="space-y-5">
           <section class="card-base p-5 space-y-3">
@@ -334,12 +391,30 @@ function backToList() {
                 <button v-if="!isPublished" class="btn-ghost px-3 py-1 text-red-600" @click="removeQuestion(questionIndex)">删除</button>
               </div>
 
+              <div v-if="questionPublishErrorMap.get(questionIndex)" class="space-y-2 rounded-xl border border-red-200 bg-red-50/70 px-3 py-2 text-sm text-red-700">
+                <p v-for="(message, index) in questionPublishErrorMap.get(questionIndex).general" :key="`q-${questionIndex}-general-${index}`" class="leading-5">
+                  {{ message }}
+                </p>
+                <p v-for="(message, index) in questionPublishErrorMap.get(questionIndex).questionText" :key="`q-${questionIndex}-text-${index}`" class="leading-5">
+                  {{ message }}
+                </p>
+                <p v-for="(message, index) in questionPublishErrorMap.get(questionIndex).correctOption" :key="`q-${questionIndex}-correct-${index}`" class="leading-5">
+                  {{ message }}
+                </p>
+                <p v-for="(message, index) in questionPublishErrorMap.get(questionIndex).options" :key="`q-${questionIndex}-options-${index}`" class="leading-5">
+                  {{ message }}
+                </p>
+              </div>
+
               <div class="space-y-2">
                 <div class="flex items-center justify-between">
                   <label class="text-sm font-medium text-text-primary">题目</label>
                   <span class="text-xs text-text-secondary">{{ question.question_text.length }}/80</span>
                 </div>
                 <input v-model="question.question_text" maxlength="80" class="input-base" :disabled="isPublished" placeholder="输入题目" />
+                <p v-if="questionPublishErrorMap.get(questionIndex)?.questionText?.length" class="text-xs leading-5 text-red-600">
+                  {{ questionPublishErrorMap.get(questionIndex).questionText[0] }}
+                </p>
               </div>
 
               <div class="space-y-3">
@@ -360,6 +435,12 @@ function backToList() {
                   <input v-model="option.option_text" maxlength="30" class="input-base flex-1" :disabled="isPublished" :placeholder="`选项 ${optionIndex + 1}`" />
                   <button v-if="!isPublished" class="btn-ghost justify-center px-3 py-1 text-red-600" :disabled="question.options.length <= 1" @click="removeOption(question, optionIndex)">移除</button>
                 </div>
+                <p v-if="questionPublishErrorMap.get(questionIndex)?.correctOption?.length" class="text-xs leading-5 text-red-600">
+                  {{ questionPublishErrorMap.get(questionIndex).correctOption[0] }}
+                </p>
+                <p v-if="questionPublishErrorMap.get(questionIndex)?.options?.length" class="text-xs leading-5 text-red-600">
+                  {{ questionPublishErrorMap.get(questionIndex).options[0] }}
+                </p>
               </div>
             </article>
           </section>
@@ -411,7 +492,8 @@ function backToList() {
           </section>
         </aside>
       </div>
-</template>
+
+    </template>
   </div>
 </template>
 
