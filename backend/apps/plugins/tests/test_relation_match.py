@@ -221,6 +221,27 @@ class TestRelationMatchHome:
         assert data["history"]["total"] == 0
 
 
+class TestRelationMatchProfileCard:
+    def test_profile_card_includes_entry_text_and_share_code(self, alice_client, alice):
+        # 未完成测试：has_profile=False、share_code=None，但入口文案必须存在
+        resp = alice_client.get(reverse("profile-plugin-cards", args=[alice.id]))
+        assert resp.status_code == 200
+        card = next(item for item in resp.json()["data"] if item["type"] == "relation_match")
+        assert card["data"]["entry_text"] == "看看你们像什么"
+        assert card["data"]["has_profile"] is False
+        assert card["data"]["share_code"] is None
+
+        # 完成测试后：画像已生成，share_code 必须返回，入口卡才能显示短码
+        test = _current_test()
+        submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        assert submit.status_code == 201
+        resp = alice_client.get(reverse("profile-plugin-cards", args=[alice.id]))
+        card = next(item for item in resp.json()["data"] if item["type"] == "relation_match")
+        assert card["data"]["entry_text"] == "看看你们像什么"
+        assert card["data"]["has_profile"] is True
+        assert card["data"]["share_code"]
+
+
 class TestRelationMatchAdminHooks:
     def test_admin_hooks_expose_profiles_tests_pairs_and_stats(self, admin_client, alice_client, bob_client):
         test = _current_test()

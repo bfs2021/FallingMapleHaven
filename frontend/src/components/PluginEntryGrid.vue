@@ -56,7 +56,7 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
         </template>
         <template v-else-if="plugin.type === 'relation_match'">
           <p class="text-sm font-semibold text-maple-700 leading-snug line-clamp-2">
-            {{ plugin.data.entry_text || plugin.desc || '看看你们像什么' }}
+            {{ plugin.data.entry_text || plugin.description || '看看你们像什么' }}
           </p>
           <p class="text-tag text-text-secondary leading-tight">
             {{ plugin.data.share_code ? `短码 ${plugin.data.share_code}` : '完成测试后生成短码' }}

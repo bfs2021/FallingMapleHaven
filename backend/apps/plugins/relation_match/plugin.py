@@ -14,7 +14,7 @@ class RelationMatchPlugin(BasePlugin):
     def get_profile_data(self, user_id):
         from .models import RelationMatchProfile, RelationMatchTest
 
-        has_profile = RelationMatchProfile.objects.filter(user_id=user_id).exists()
+        profile = RelationMatchProfile.objects.filter(user_id=user_id, test__slug="current").first()
         active_test = RelationMatchTest.objects.filter(slug="current").first()
         return {
             "type": self.plugin_type,
@@ -22,8 +22,10 @@ class RelationMatchPlugin(BasePlugin):
             "icon": self.icon,
             "description": self.description,
             "data": {
-                "has_profile": has_profile,
+                "has_profile": profile is not None,
                 "current_test_id": active_test.id if active_test else None,
+                "entry_text": self.description,
+                "share_code": profile.share_code if profile else None,
             },
             "route": f"/profile/{user_id}/plugins/relation-match",
         }
