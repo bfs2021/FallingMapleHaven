@@ -100,6 +100,85 @@ def admin_submission_data(submission):
     }
 
 
+def admin_relation_match_test_data(test):
+    return {
+        "id": test.id,
+        "slug": test.slug,
+        "title": test.title,
+        "status": test.status,
+        "question_count": test.questions.count(),
+        "created_at": test.created_at,
+        "updated_at": test.updated_at,
+        "published_at": test.published_at,
+        "deleted_at": test.deleted_at,
+    }
+
+
+def admin_relation_match_question_data(question):
+    return {
+        "id": question.id,
+        "question_type": question.question_type,
+        "question_text": question.question_text,
+        "scene_tag": question.scene_tag,
+        "order": question.order,
+        "options": [
+            {
+                "id": option.id,
+                "option_text": option.option_text,
+                "order": option.order,
+                "dimension_payload": option.dimension_payload,
+            }
+            for option in question.options.all().order_by("order")
+        ],
+    }
+
+
+def admin_relation_match_submission_data(submission):
+    return {
+        "id": submission.id,
+        "test_id": submission.test_id,
+        "participant_type": submission.participant_type,
+        "participant_name": submission.participant_name,
+        "user": admin_user_brief(submission.user) if submission.user_id else None,
+        "visitor_token_hash": submission.visitor_token_hash,
+        "is_deleted": submission.is_deleted,
+        "created_at": submission.created_at,
+    }
+
+
+def admin_relation_match_profile_data(profile):
+    return {
+        "id": profile.id,
+        "participant_type": profile.participant_type,
+        "participant_name": profile.participant_name,
+        "user": admin_user_brief(profile.user) if profile.user_id else None,
+        "visitor_token_hash": profile.visitor_token_hash,
+        "dimension_scores": profile.dimension_scores,
+        "summary_text": profile.summary_text,
+        "share_code": profile.share_code,
+        "created_at": profile.created_at,
+    }
+
+
+def admin_relation_match_pair_data(pair):
+    return {
+        "id": pair.id,
+        "relation_type": pair.relation_type,
+        "subtitle": pair.subtitle,
+        "profile_a": admin_relation_match_profile_data(pair.profile_a),
+        "profile_b": admin_relation_match_profile_data(pair.profile_b),
+        "summary_a": pair.summary_a,
+        "summary_b": pair.summary_b,
+        "role_a": pair.role_a,
+        "role_b": pair.role_b,
+        "dimension_compare": pair.dimension_compare,
+        "relation_explain": pair.relation_explain,
+        "highlight_text": pair.highlight_text,
+        "advice_text": pair.advice_text,
+        "created_at": pair.created_at,
+    }
+
+
 class AdminUserListView(APIView, AdminPermissionMixin):
     permission_classes = [IsAuthenticated]
 
@@ -549,6 +628,156 @@ class AdminQuizStatsView(APIView, AdminPermissionMixin):
             "user_submissions": QuizSubmission.objects.filter(is_deleted=False, participant_type=QuizSubmission.ParticipantType.USER).count(),
             "visitor_submissions": QuizSubmission.objects.filter(is_deleted=False, participant_type=QuizSubmission.ParticipantType.VISITOR).count(),
             "question_bank_count": QuizQuestionBank.objects.count(),
+        })
+
+
+class AdminRelationMatchTestListView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchTest
+
+        tests = RelationMatchTest.objects.prefetch_related("questions").order_by("-created_at")
+        page, page_size, total, page_tests = admin_paginate(tests, request)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": [admin_relation_match_test_data(item) for item in page_tests],
+        })
+
+
+class AdminRelationMatchTestDetailView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, test_id):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchTest
+
+        test = RelationMatchTest.objects.prefetch_related("questions__options").filter(pk=test_id).first()
+        if not test:
+            return api_response(code=40004, message="测试不存在", status=status.HTTP_404_NOT_FOUND)
+
+        data = admin_relation_match_test_data(test)
+        data["questions"] = [admin_relation_match_question_data(item) for item in test.questions.all().order_by("order")]
+        return api_response(data=data)
+
+
+class AdminRelationMatchSubmissionListView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchTestAnswer
+
+        submissions = RelationMatchTestAnswer.objects.select_related("test", "user").order_by("-created_at")
+        page, page_size, total, page_submissions = admin_paginate(submissions, request)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": [admin_relation_match_submission_data(item) for item in page_submissions],
+        })
+
+
+class AdminRelationMatchSubmissionDetailView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, submission_id):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchTestAnswer
+
+        submission = RelationMatchTestAnswer.objects.select_related("test", "user").prefetch_related("items__question__options").filter(pk=submission_id).first()
+        if not submission:
+            return api_response(code=40004, message="答卷不存在", status=status.HTTP_404_NOT_FOUND)
+
+        data = admin_relation_match_submission_data(submission)
+        data["answers"] = [
+            {
+                "id": item.id,
+                "question_id": item.question_id,
+                "question_text": item.question.question_text,
+                "selected_options": item.selected_options,
+                "dimension_payload": item.dimension_payload,
+            }
+            for item in submission.items.all().order_by("question__order")
+        ]
+        return api_response(data=data)
+
+
+class AdminRelationMatchProfileListView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchProfile
+
+        profiles = RelationMatchProfile.objects.select_related("user", "test").order_by("-created_at")
+        page, page_size, total, page_profiles = admin_paginate(profiles, request)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": [admin_relation_match_profile_data(item) for item in page_profiles],
+        })
+
+
+class AdminRelationMatchPairListView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchPairResult
+
+        pairs = RelationMatchPairResult.objects.select_related("profile_a", "profile_b").order_by("-created_at")
+        page, page_size, total, page_pairs = admin_paginate(pairs, request)
+        return api_response(data={
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "results": [admin_relation_match_pair_data(item) for item in page_pairs],
+        })
+
+
+class AdminRelationMatchStatsView(APIView, AdminPermissionMixin):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        error = self.check_admin(request)
+        if error:
+            return error
+
+        from apps.plugins.relation_match.models import RelationMatchPairResult, RelationMatchProfile, RelationMatchTest, RelationMatchTestAnswer
+
+        return api_response(data={
+            "total_tests": RelationMatchTest.objects.count(),
+            "published_tests": RelationMatchTest.objects.filter(status=RelationMatchTest.Status.PUBLISHED).count(),
+            "total_profiles": RelationMatchProfile.objects.count(),
+            "user_profiles": RelationMatchProfile.objects.filter(participant_type=RelationMatchProfile.ParticipantType.USER).count(),
+            "visitor_profiles": RelationMatchProfile.objects.filter(participant_type=RelationMatchProfile.ParticipantType.VISITOR).count(),
+            "total_submissions": RelationMatchTestAnswer.objects.filter(is_deleted=False).count(),
+            "user_submissions": RelationMatchTestAnswer.objects.filter(is_deleted=False, participant_type=RelationMatchTestAnswer.ParticipantType.USER).count(),
+            "visitor_submissions": RelationMatchTestAnswer.objects.filter(is_deleted=False, participant_type=RelationMatchTestAnswer.ParticipantType.VISITOR).count(),
+            "total_pairs": RelationMatchPairResult.objects.count(),
         })
 
 
