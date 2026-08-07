@@ -115,18 +115,6 @@ class RelationMatchHomeProfileSerializer(serializers.ModelSerializer):
         return f"/profile/{obj.user_id or obj.id}/plugins/relation-match?shareCode={obj.share_code}"
 
 
-class RelationMatchHomeSerializer(serializers.Serializer):
-    has_profile = serializers.BooleanField()
-    profile = RelationMatchHomeProfileSerializer(allow_null=True)
-    entry_text = serializers.CharField()
-    start_test_url = serializers.CharField()
-    invite_url = serializers.CharField(allow_null=True)
-    share_code = serializers.CharField(allow_null=True)
-    share_url = serializers.CharField(allow_null=True)
-    next_action = serializers.CharField(allow_null=True)
-    history = serializers.DictField(required=False)
-
-
 class RelationMatchCurrentTestSerializer(serializers.ModelSerializer):
     questions = RelationMatchQuestionPublicSerializer(many=True, read_only=True)
 

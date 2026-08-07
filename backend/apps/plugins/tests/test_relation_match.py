@@ -219,6 +219,21 @@ class TestRelationMatchHome:
         assert data["has_profile"] is True
         assert data["share_code"]
         assert data["history"]["total"] == 0
+        # 有画像但尚未配对：下一步应为“邀请中”
+        assert data["next_action"] == "invite"
+
+    def test_home_next_action_becomes_match_after_pairing(self, alice_client, bob_client, alice):
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        bob_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = alice_submit.json()["data"]["share_code"]
+        bob_client.post(_url("share-match", share_code), {}, format="json")
+
+        resp = alice_client.get(_url("home", alice.id))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["history"]["total"] == 1
+        assert data["next_action"] == "match"
 
 
 class TestRelationMatchProfileCard:

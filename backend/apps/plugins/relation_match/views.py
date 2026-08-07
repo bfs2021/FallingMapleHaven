@@ -64,18 +64,31 @@ class RelationMatchHomeView(APIView):
             return api_response(code=40004, message="用户不存在", status=status.HTTP_404_NOT_FOUND)
 
         profile = RelationMatchProfile.objects.filter(user_id=owner_id, test__slug="current").first()
+        if profile is None:
+            response_data = {
+                "has_profile": False,
+                "profile": None,
+                "entry_text": "看看你们像什么",
+                "start_test_url": f"/profile/{owner_id}/plugins/relation-match/tests/current/",
+                "share_code": None,
+                "share_url": None,
+                "next_action": "invite",
+                "history": {"total": 0, "page": 1, "page_size": 20, "results": []},
+            }
+            response = api_response(data=response_data)
+            return _response_with_cookie(response, request)
+
         response_data = {
-            "has_profile": profile is not None,
-            "profile": RelationMatchHomeProfileSerializer(profile).data if profile else None,
+            "has_profile": True,
+            "profile": RelationMatchHomeProfileSerializer(profile).data,
             "entry_text": "看看你们像什么",
             "start_test_url": f"/profile/{owner_id}/plugins/relation-match/tests/current/",
-            "invite_url": None,
-            "share_code": profile.share_code if profile else None,
-            "share_url": f"/profile/{owner_id}/plugins/relation-match?shareCode={profile.share_code}" if profile else None,
-            "next_action": "match" if profile else "invite",
+            "share_code": profile.share_code,
+            "share_url": f"/profile/{owner_id}/plugins/relation-match?shareCode={profile.share_code}",
+            "next_action": "invite",
             "history": {"total": 0, "page": 1, "page_size": 20, "results": []},
         }
-        if profile and request.user.is_authenticated and request.user.id == owner_id:
+        if request.user.is_authenticated and request.user.id == owner_id:
             pairs = RelationMatchPairResult.objects.filter(
                 profile_a__user_id=owner_id
             ) | RelationMatchPairResult.objects.filter(profile_b__user_id=owner_id)
@@ -95,6 +108,8 @@ class RelationMatchHomeView(APIView):
                     "created_at": result.created_at,
                 })
             response_data["history"] = {"total": len(history_items), "page": 1, "page_size": 20, "results": history_items}
+            if history_items:
+                response_data["next_action"] = "match"
         response = api_response(data=response_data)
         return _response_with_cookie(response, request)
 
