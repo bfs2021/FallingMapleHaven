@@ -15,7 +15,7 @@ import {
   Sun, Moon, HelpCircle, FileText, Paperclip,
   Gift, Star, Copy, ExternalLink, Shield, AlertTriangle,
   BarChart3, Activity, Puzzle, ScrollText, HeartHandshake,
-  Sparkles,
+  Sparkles, BookOpen,
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -102,6 +102,7 @@ const iconMap = {
   scrollText: ScrollText,
   heartHandshake: HeartHandshake,
   sparkles: Sparkles,
+  bookOpen: BookOpen,
 }
 </script>
 
