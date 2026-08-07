@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -180,23 +180,45 @@ class RelationMatchCurrentTestSubmissionView(APIView):
             return api_response(code=40001, message=str(exc), status=status.HTTP_400_BAD_REQUEST, data={"errors": [{"message": str(exc)}]})
 
         atomic_context: Any = transaction.atomic
-        with atomic_context():
-            answer = RelationMatchTestAnswer.objects.create(
+        try:
+            with atomic_context():
+                answer = RelationMatchTestAnswer.objects.create(
+                    test=test,
+                    participant_type=context.participant_type,
+                    user=context.user,
+                    participant_name=context.participant_name,
+                    visitor_token_hash=context.visitor_token_hash,
+                )
+                for item in answer_items:
+                    RelationMatchTestAnswerItem.objects.create(answer=answer, **item)
+
+                profile = get_or_create_profile(test, context, dimension_scores)
+                pair_result = None
+                if other_profile is not None:
+                    pair_result, created = create_or_get_pair_result(profile, other_profile)
+                    if created:
+                        create_plugin_notifications(pair_result, profile)
+        except IntegrityError:
+            answer_exists = RelationMatchTestAnswer.objects.filter(
                 test=test,
                 participant_type=context.participant_type,
                 user=context.user,
-                participant_name=context.participant_name,
                 visitor_token_hash=context.visitor_token_hash,
+                is_deleted=False,
+            ).exists()
+            profile_exists = RelationMatchProfile.objects.filter(
+                test=test,
+                participant_type=context.participant_type,
+                user=context.user,
+                visitor_token_hash=context.visitor_token_hash,
+            ).exists()
+            if not answer_exists and not profile_exists:
+                raise
+            return api_response(
+                code=40005,
+                message="你已经提交过这套测试",
+                status=status.HTTP_400_BAD_REQUEST,
             )
-            for item in answer_items:
-                RelationMatchTestAnswerItem.objects.create(answer=answer, **item)
-
-            profile = get_or_create_profile(test, context, dimension_scores)
-            pair_result = None
-            if other_profile is not None:
-                pair_result, created = create_or_get_pair_result(profile, other_profile)
-                if created:
-                    create_plugin_notifications(pair_result, profile)
 
         profile_user_id = getattr(profile, "user_id", None)
         profile_id = getattr(profile, "id", None)

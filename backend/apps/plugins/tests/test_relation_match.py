@@ -114,6 +114,15 @@ class TestRelationMatchVisitorFlow:
         assert second.status_code == 400
         assert second.json()["code"] == 40005
 
+    def test_logged_in_duplicate_submit_is_rejected(self, alice_client):
+        test = _current_test()
+        payload = _answer_payload(test)
+        first = alice_client.post(_url("current-submission"), payload, format="json")
+        second = alice_client.post(_url("current-submission"), payload, format="json")
+        assert first.status_code == 201
+        assert second.status_code == 400
+        assert second.json()["code"] == 40005
+
     def test_visitor_history_requires_login(self, client):
         resp = client.get(_url("my-pairs"))
         assert resp.status_code == 403
