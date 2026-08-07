@@ -9,7 +9,8 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
-from ...common.utils import api_response, safe_int
+from apps.common.utils import api_response, safe_int
+from apps.plugins.utils import ensure_plugin_active
 from .catalog import RELATION_TYPES
 from .models import (
     RelationMatchPairResult,
@@ -56,6 +57,9 @@ class RelationMatchHomeView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, owner_id):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
         if not User.objects.filter(pk=owner_id).exists():
             return api_response(code=40004, message="用户不存在", status=status.HTTP_404_NOT_FOUND)
 
@@ -99,6 +103,9 @@ class RelationMatchCurrentTestView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
         try:
             test = get_current_test()
         except ObjectDoesNotExist:
@@ -114,6 +121,9 @@ class RelationMatchCurrentTestSubmissionView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
         try:
             test = get_current_test()
         except ObjectDoesNotExist:
@@ -239,6 +249,9 @@ class RelationMatchShareMatchView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, share_code):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
         if request.user.is_authenticated:
             current_profile = RelationMatchProfile.objects.filter(user_id=request.user.id, test__slug="current").first()
         else:
@@ -271,6 +284,9 @@ class RelationMatchPairDetailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, result_id):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
         try:
             result = RelationMatchPairResult.objects.select_related("profile_a", "profile_b").get(pk=result_id)
         except ObjectDoesNotExist:
@@ -283,6 +299,9 @@ class RelationMatchMyPairsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
         profiles = RelationMatchProfile.objects.filter(user=request.user)
         if not profiles.exists():
             return api_response(data={"total": 0, "page": 1, "page_size": 20, "results": []})

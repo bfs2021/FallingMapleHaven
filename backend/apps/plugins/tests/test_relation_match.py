@@ -48,6 +48,12 @@ class TestRelationMatchCatalog:
         types = {item["type"] for item in resp.json()["data"]}
         assert "relation_match" in types
 
+    def test_disabled_plugin_blocks_business_endpoints(self, alice_client):
+        Plugin.objects.filter(plugin_type="relation_match").update(is_active=False)
+        resp = alice_client.get(_url("current-test"))
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004
+
     def test_current_test_has_exactly_40_questions_and_option_bounds(self, client):
         test = _current_test()
         assert test.status == RelationMatchTest.Status.PUBLISHED
