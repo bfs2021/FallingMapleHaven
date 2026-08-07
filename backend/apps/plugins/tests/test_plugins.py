@@ -95,7 +95,7 @@ class TestProfilePluginCardsView:
         url = _profile_cards_url(99999)
         resp = alice_client.get(url)
         assert resp.status_code == 404
-        assert resp.json()["code"] == 4004
+        assert resp.json()["code"] == 40004
 
     def test_includes_guestbook_card(self, alice_client, alice):
         url = _profile_cards_url(alice.pk)
