@@ -14,7 +14,8 @@ import {
   Hash, Tag, Bookmark, Filter, List, Grid as GridIcon,
   Sun, Moon, HelpCircle, FileText, Paperclip,
   Gift, Star, Copy, ExternalLink, Shield, AlertTriangle,
-  BarChart3, Activity, Puzzle, ScrollText,
+  BarChart3, Activity, Puzzle, ScrollText, HeartHandshake,
+  Sparkles,
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -99,6 +100,8 @@ const iconMap = {
   activity: Activity,
   puzzle: Puzzle,
   scrollText: ScrollText,
+  heartHandshake: HeartHandshake,
+  sparkles: Sparkles,
 }
 </script>
 

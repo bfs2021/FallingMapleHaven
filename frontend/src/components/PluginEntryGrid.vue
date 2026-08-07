@@ -11,6 +11,7 @@ const iconMap = {
   'help-circle': 'helpCircle',
   'message-question': 'messageCircleMore',
   'message-square': 'messageSquare',
+  'heart-handshake': 'heartHandshake',
 }
 
 const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
@@ -52,6 +53,14 @@ const gridIcon = (icon) => iconMap[icon] || icon || 'gift'
             {{ plugin.data.total_messages ?? 0 }}
           </p>
           <p class="text-tag text-text-secondary leading-tight">条留言</p>
+        </template>
+        <template v-else-if="plugin.type === 'relation_match'">
+          <p class="text-sm font-semibold text-maple-700 leading-snug line-clamp-2">
+            {{ plugin.data.entry_text || plugin.desc || '看看你们像什么' }}
+          </p>
+          <p class="text-tag text-text-secondary leading-tight">
+            {{ plugin.data.share_code ? `短码 ${plugin.data.share_code}` : '完成测试后生成短码' }}
+          </p>
         </template>
         <template v-else>
           <p class="text-tag text-text-secondary leading-tight">{{ plugin.desc || '' }}</p>
