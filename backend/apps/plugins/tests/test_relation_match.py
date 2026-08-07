@@ -78,6 +78,17 @@ class TestRelationMatchPublicTest:
         assert resp.cookies.get("fmh_relation_visitor_id") is not None
         assert resp.cookies["fmh_relation_visitor_id"]["max-age"] == 60 * 60 * 24 * 365
 
+    def test_malformed_answers_return_parameter_error(self, client):
+        client.get(_url("current-test"))
+        malformed_answers = [None] * 40
+        resp = client.post(
+            _url("current-submission"),
+            {"participant_name": "秋风", "answers": malformed_answers},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.json()["code"] == 40001
+
 
 class TestRelationMatchVisitorFlow:
     def test_visitor_submit_creates_profile_and_hashes_cookie(self, client):
