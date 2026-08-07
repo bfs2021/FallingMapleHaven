@@ -360,7 +360,7 @@ async function shareCurrentResultUrl() {
               type="button"
               @click="shareTestUrl(test.id)"
             >
-              <Icon name="share2" :size="16" />
+              <Icon name="share" :size="16" />
               复制答题链接
             </button>
             <button class="btn-ghost col-span-2 px-4 py-2 text-red-600" :disabled="actingId === test.id" @click="deleteTest(test)">
@@ -484,7 +484,7 @@ async function shareCurrentResultUrl() {
           class="btn-secondary px-4 py-2 inline-flex items-center justify-center gap-2"
           @click="shareLeaderboardUrl()"
         >
-          <Icon name="share2" :size="16" />
+          <Icon name="share" :size="16" />
           分享答卷榜
         </button>
       </div>
