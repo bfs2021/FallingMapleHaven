@@ -11,6 +11,10 @@ def seed_plugins(apps, schema_editor):
         type="question_box",
         defaults={"name": "匿名提问箱", "is_active": True},
     )
+    Plugin.objects.get_or_create(
+        type="relation_match",
+        defaults={"name": "关系匹配", "is_active": True},
+    )
 
 
 class Migration(migrations.Migration):
