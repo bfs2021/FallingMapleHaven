@@ -20,6 +20,15 @@ export const quizApi = {
   questionBank: (params) => client.get('/plugins/quiz/question-bank/', { params }),
 }
 
+export const relationMatchApi = {
+  getHome: (ownerId) => client.get(`/plugins/relation-match/users/${ownerId}/`),
+  getTestDetail: () => client.get('/plugins/relation-match/tests/current/'),
+  submitTest: (data) => client.post('/plugins/relation-match/tests/current/submissions/', data),
+  matchProfile: (shareCode, data) => client.post(`/plugins/relation-match/shares/${shareCode}/match/`, data),
+  getPairResult: (pairId) => client.get(`/plugins/relation-match/pairs/${pairId}/`),
+  myPairs: (params) => client.get('/plugins/relation-match/my/pairs/', { params }),
+}
+
 export const questionBoxApi = {
   ask: (data) => client.post('/plugins/question-box/', data),
   inbox: () => client.get('/plugins/question-box/inbox/'),

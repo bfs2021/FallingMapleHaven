@@ -5,6 +5,7 @@ import './assets/main.css'
 
 import '@/plugins/quiz'
 import '@/plugins/questions'
+import '@/plugins/relation-match'
 import router from './router'
 
 const app = createApp(App)

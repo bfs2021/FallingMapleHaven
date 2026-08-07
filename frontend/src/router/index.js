@@ -53,6 +53,21 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/profile/:userId/plugins/relation-match',
+    name: 'RelationMatchPage',
+    component: () => import('@/views/RelationMatchPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/relation-match/tests/current',
+    name: 'RelationMatchTestPage',
+    component: () => import('@/views/RelationMatchTestPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/relation-match/pairs/:pairId',
+    name: 'RelationMatchPairResultPage',
+    component: () => import('@/views/RelationMatchPairResultPage.vue'),
+  },
+  {
     path: '/profile/:userId/guestbook',
     name: 'Guestbook',
     component: () => import('@/views/GuestbookPage.vue'),

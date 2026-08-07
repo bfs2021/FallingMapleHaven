@@ -119,7 +119,7 @@ function onTabChange(tab) {
 }
 
 function goToPlugin(plugin) {
-  const publicPlugins = new Set(['quiz', 'guestbook'])
+  const publicPlugins = new Set(['quiz', 'relation_match', 'guestbook'])
   router.push(authStore.isAuthenticated || publicPlugins.has(plugin.type) ? plugin.route : `/login?next=${plugin.route}`)
 }
 
