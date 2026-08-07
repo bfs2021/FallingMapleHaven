@@ -39,8 +39,8 @@ class RelationMatchPlugin(BasePlugin):
             ]
         }
 
-    def get_summary(self, user_id):
-        return self.get_profile_data(user_id)
+    def get_summary(self, request_user_id):
+        return self.get_profile_data(request_user_id)
 
     def get_profile_card_data(self, viewer_id, owner_id):
         return self.get_profile_data(owner_id)
