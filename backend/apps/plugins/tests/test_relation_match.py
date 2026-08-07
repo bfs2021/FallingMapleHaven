@@ -118,6 +118,20 @@ class TestRelationMatchVisitorFlow:
         resp = client.get(_url("my-pairs"))
         assert resp.status_code == 403
 
+    def test_multi_select_single_choice_is_stored_as_array(self, client):
+        test = _current_test()
+        question = test.questions.order_by("order").first()
+        question.question_type = RelationMatchQuestion.Type.MULTI_SELECT
+        question.save(update_fields=["question_type"])
+
+        client.get(_url("current-test"))
+        resp = client.post(_url("current-submission"), _answer_payload(test, participant_name="秋风"), format="json")
+        assert resp.status_code == 201
+
+        answer = RelationMatchTestAnswer.objects.latest("id")
+        item = RelationMatchTestAnswerItem.objects.get(answer=answer, question=question)
+        assert item.selected_options == [question.options.order_by("order").first().id]
+
 
 class TestRelationMatchPairing:
     def test_logged_in_match_creates_idempotent_pair_and_notifications(self, alice_client, bob_client, alice, bob):
