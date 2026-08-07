@@ -336,6 +336,9 @@ class MyQuizTestDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_object_response(self, request, test_id):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return None, inactive
         try:
             test = QuizTest.objects.get(pk=test_id)
         except QuizTest.DoesNotExist:
@@ -391,6 +394,9 @@ class PublishQuizTestView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, test_id):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
         try:
             test = QuizTest.objects.get(pk=test_id)
         except QuizTest.DoesNotExist:
@@ -432,6 +438,9 @@ class PublicQuizTestDetailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, test_id):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
         try:
             test = QuizTest.objects.get(pk=test_id, status=QuizTest.Status.PUBLISHED)
         except QuizTest.DoesNotExist:
@@ -456,6 +465,9 @@ class SubmitQuizTestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, test_id):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
         try:
             test = QuizTest.objects.select_related("owner").get(pk=test_id, status=QuizTest.Status.PUBLISHED)
         except QuizTest.DoesNotExist:
@@ -582,6 +594,9 @@ class QuizTestLeaderboardView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, test_id):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
         try:
             test = QuizTest.objects.get(pk=test_id, status=QuizTest.Status.PUBLISHED)
         except QuizTest.DoesNotExist:
@@ -602,6 +617,9 @@ class MyQuizSubmissionsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
         submissions = QuizSubmission.objects.filter(user=request.user, is_deleted=False).select_related("test", "test__owner").order_by("-created_at")
         page = _paginate(submissions, request, QuizSubmissionSummarySerializer, {"request": request})
         items = submissions[(page["page"] - 1) * page["page_size"]:page["page"] * page["page_size"]]
@@ -631,6 +649,9 @@ class QuizQuestionBankView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        inactive = ensure_plugin_active("quiz")
+        if inactive:
+            return inactive
         bank = QuizQuestionBank.objects.all().order_by("-created_at")
         q = request.query_params.get("q")
         if q:

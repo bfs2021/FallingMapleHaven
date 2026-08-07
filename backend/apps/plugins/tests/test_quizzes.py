@@ -63,6 +63,12 @@ def published_test(alice_client):
 
 
 class TestQuizOwnerTests:
+    def test_disabled_plugin_blocks_business_endpoints(self, alice_client):
+        Plugin.objects.filter(plugin_type="quiz").update(is_active=False)
+        resp = alice_client.get(_url("my-tests"))
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004
+
     def test_create_draft_allows_less_than_ten_questions(self, alice_client, alice):
         resp = alice_client.post(_url("my-tests"), _test_payload(count=2), format="json")
 
