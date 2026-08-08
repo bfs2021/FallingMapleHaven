@@ -236,7 +236,7 @@ function buildShareUrlWithCode() {
             </button>
           </div>
 
-          <div v-if="!canDirectMatch" class="rounded-2xl border border-dashed border-maple-200 bg-maple-50/40 p-4">
+          <div v-if="!isAuthenticated && !canDirectMatch" class="rounded-2xl border border-dashed border-maple-200 bg-maple-50/40 p-4">
             <p class="text-sm text-text-secondary mb-3">未登录时可先继续作为访客，答完再自动回到这里完成匹配。</p>
             <div class="flex flex-wrap gap-2">
               <button class="btn-secondary px-4 py-2 min-h-[44px]" @click="openTestFlow">
@@ -294,7 +294,7 @@ function buildShareUrlWithCode() {
           <button
             v-for="item in historyItems"
             :key="item.pair_id"
-            class="w-full text-left rounded-2xl border border-border bg-white px-4 py-3 hover:border-maple-300 hover:shadow-card transition-all active:scale-[0.99] min-h-[72px]"
+            class="w-full text-left rounded-2xl border border-border bg-white px-4 py-3 hover:border-maple-300 hover:shadow-card transition-all min-h-[72px]"
             @click="goToHistory(item.pair_id)"
           >
             <div class="flex items-start justify-between gap-3">
@@ -318,3 +318,20 @@ function buildShareUrlWithCode() {
     </template>
   </div>
 </template>
+
+<style scoped>
+/* Kill all elastic/scale animations on interactive elements */
+button:active,
+input:active,
+select:active,
+textarea:active,
+a:active,
+.card-base:active,
+.btn-primary:active,
+.btn-secondary:active,
+.btn-ghost:active {
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+  transform: none !important;
+}
+</style>

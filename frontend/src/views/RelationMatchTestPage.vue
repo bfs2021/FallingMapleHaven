@@ -6,8 +6,6 @@ import { relationMatchApi } from '@/api/plugin'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 import {
-  buildRelationMatchAbsoluteUrl,
-  extractRelationMatchPairId,
   getRelationMatchQuestionTypeLabel,
   normalizeRelationMatchQueryValue,
 } from '@/utils/relationMatch'
@@ -115,13 +113,6 @@ function questionTag(question) {
   return question.scene_tag || getRelationMatchQuestionTypeLabel(question.question_type)
 }
 
-function normalizeParticipantName() {
-  if (authStore.isAuthenticated) {
-    return authStore.user?.nickname || authStore.user?.username || ''
-  }
-  return visitorName.value.trim()
-}
-
 async function submitTest() {
   if (!test.value || !canSubmitAll.value) {
     toast.error('请先完成全部 40 题', 4000)
@@ -149,36 +140,23 @@ async function submitTest() {
 
     const submitRes = await relationMatchApi.submitTest(payload)
     const submittedProfile = submitRes.data || {}
-    const nextAction = submittedProfile.next_action || 'invite'
-    const code = shareCode.value.trim()
 
-    if (nextAction === 'match') {
-      if (!code) {
-        throw new Error('缺少匹配码，请重新从分享链接进入')
-      }
+    toast.success('画像已生成')
 
-      const matchRes = await relationMatchApi.matchProfile(code, {
-        participant_name: normalizeParticipantName(),
-      })
-      const pairId = extractRelationMatchPairId(matchRes.data)
-      if (!pairId) throw new Error('关系结果缺少 ID')
+    if (submittedProfile.result_url) {
+      await router.replace(submittedProfile.result_url)
+      return
+    }
 
+    if (ownerId.value) {
       await router.replace({
-        name: 'RelationMatchPairResultPage',
-        params: { userId: ownerId.value, pairId },
+        name: 'RelationMatchPage',
+        params: { userId: ownerId.value },
       })
       return
     }
 
-    if (submittedProfile.share_url) {
-      toast.success('画像已生成')
-    }
-
-    await router.replace({
-      name: 'RelationMatchPage',
-      params: { userId: ownerId.value },
-      query: {},
-    })
+    await router.replace({ name: 'RelationMatchMyPage' })
   } catch (error) {
     const message = error.response?.data?.message || error.message || '提交失败，请稍后再试'
     toast.error(message, 5000)
@@ -262,7 +240,7 @@ async function submitTest() {
           <button
             v-for="option in currentQuestion.options || []"
             :key="questionOptionId(option)"
-            class="w-full rounded-2xl border px-4 py-3 text-left transition-all min-h-[56px] active:scale-[0.99]"
+            class="w-full rounded-2xl border px-4 py-3 text-left transition-all min-h-[56px]"
             :class="isOptionSelected(currentQuestion, questionOptionId(option))
               ? 'border-maple-400 bg-maple-50 shadow-card text-maple-700'
               : 'border-border bg-white hover:border-maple-200 hover:bg-maple-50/40 text-text-primary'"
@@ -316,3 +294,20 @@ async function submitTest() {
     </template>
   </div>
 </template>
+
+<style scoped>
+/* Kill all elastic/scale animations on interactive elements */
+button:active,
+input:active,
+select:active,
+textarea:active,
+a:active,
+.card-base:active,
+.btn-primary:active,
+.btn-secondary:active,
+.btn-ghost:active {
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+  transform: none !important;
+}
+</style>
