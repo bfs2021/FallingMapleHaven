@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { relationMatchApi } from '@/api/plugin'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
@@ -15,6 +16,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const toast = useToast()
 
 const result = ref(null)
@@ -22,6 +24,15 @@ const loading = ref(true)
 
 const ownerId = computed(() => route.params.userId)
 const pairId = computed(() => route.params.pairId)
+const homeTarget = computed(() => {
+  if (route.params.userId) {
+    return { name: 'RelationMatchPage', params: { userId: ownerId.value } }
+  }
+  if (authStore.isAuthenticated) {
+    return { name: 'RelationMatchPage', params: { userId: authStore.user.user_id } }
+  }
+  return { name: 'RelationMatchMyPage' }
+})
 const shareUrl = computed(() => result.value?.share_url || route.fullPath)
 const shareAbsoluteUrl = computed(() => buildRelationMatchAbsoluteUrl(shareUrl.value))
 const profileA = computed(() => result.value?.profile_a || {})
@@ -161,7 +172,7 @@ async function copyLink() {
 }
 
 function goHome() {
-  router.push({ name: 'RelationMatchPage', params: { userId: ownerId.value } })
+  router.push(homeTarget.value)
 }
 </script>
 
@@ -235,7 +246,6 @@ function goHome() {
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-text-primary">八维对比</h2>
-            <p class="text-sm text-text-secondary">雷达图和逐维结果只展示分值，不暴露权重或标准答案。</p>
           </div>
           <Icon name="barChart" :size="18" class="text-maple-400" />
         </div>
@@ -379,7 +389,7 @@ function goHome() {
       <Icon name="alertCircle" :size="40" class="mx-auto text-maple-300" />
       <p class="font-medium text-text-primary">关系结果不存在</p>
       <p class="text-sm text-text-secondary">请检查链接是否正确。</p>
-      <RouterLink class="btn-primary inline-flex items-center gap-2 px-4 py-2 min-h-[44px]" :to="{ name: 'RelationMatchPage', params: { userId: ownerId } }">
+      <RouterLink class="btn-primary inline-flex items-center gap-2 px-4 py-2 min-h-[44px]" :to="homeTarget">
         返回主页
       </RouterLink>
     </div>

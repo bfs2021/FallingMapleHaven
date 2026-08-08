@@ -28,7 +28,6 @@ const profileCode = computed(() => home.value?.profile?.share_code || '')
 const profileUrl = computed(() => home.value?.profile?.share_url || '')
 const profileAbsoluteUrl = computed(() => buildRelationMatchAbsoluteUrl(profileUrl.value))
 const isAuthenticated = computed(() => authStore.isAuthenticated)
-const isOwner = computed(() => authStore.user?.user_id === Number(ownerId.value))
 const canDirectMatch = computed(() => Boolean(home.value?.has_profile))
 const inviteLabel = computed(() => {
   if (!home.value?.has_profile) return '尚未完成测试'
@@ -157,9 +156,6 @@ function buildShareUrlWithCode() {
               {{ inviteLabel }}
             </div>
             <h1 class="page-title">看看你们像什么</h1>
-            <p class="text-sm text-text-secondary max-w-2xl">
-              {{ isOwner ? '复制短码或链接，把你的关系匹配结果发给另一位参与者。' : '先完成 40 题，再用短码或链接进入关系结果。' }}
-            </p>
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -216,7 +212,6 @@ function buildShareUrlWithCode() {
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-text-primary">输入匹配码</h2>
-            <p class="text-sm text-text-secondary">用短码直接进入配对流程，或先完成测试再自动匹配。</p>
           </div>
           <Icon name="hash" :size="18" class="text-maple-400" />
         </div>
@@ -256,7 +251,6 @@ function buildShareUrlWithCode() {
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-text-primary">使用说明</h2>
-            <p class="text-sm text-text-secondary">先完成基础测试，再交换短码或分享链接生成关系结果。</p>
           </div>
           <Icon name="bookOpen" :size="18" class="text-maple-400" />
         </div>
@@ -285,7 +279,6 @@ function buildShareUrlWithCode() {
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-text-primary">匹配历史</h2>
-            <p class="text-sm text-text-secondary">点进任意一项，直接打开关系结果。</p>
           </div>
           <span class="text-xs text-maple-700 bg-maple-50 px-2.5 py-1 rounded-full">{{ historyTotal }} 条</span>
         </div>

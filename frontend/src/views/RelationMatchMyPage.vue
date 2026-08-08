@@ -149,9 +149,6 @@ function buildShareUrlWithCode() {
               {{ inviteLabel }}
             </div>
             <h1 class="page-title">我的画像</h1>
-            <p class="text-sm text-text-secondary max-w-2xl">
-              完成基础测试生成你的专属画像，再用短码或链接和对方一起生成关系结果。
-            </p>
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -208,7 +205,6 @@ function buildShareUrlWithCode() {
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-text-primary">输入匹配码</h2>
-            <p class="text-sm text-text-secondary">用短码直接进入配对流程，或先完成测试再自动匹配。</p>
           </div>
           <Icon name="hash" :size="18" class="text-maple-400" />
         </div>
@@ -251,7 +247,6 @@ function buildShareUrlWithCode() {
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-lg font-semibold text-text-primary">匹配历史</h2>
-            <p class="text-sm text-text-secondary">点进任意一项，直接打开关系结果。</p>
           </div>
           <span class="text-xs text-maple-700 bg-maple-50 px-2.5 py-1 rounded-full">{{ historyTotal }} 条</span>
         </div>
