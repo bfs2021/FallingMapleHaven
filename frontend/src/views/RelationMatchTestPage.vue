@@ -6,7 +6,6 @@ import { relationMatchApi } from '@/api/plugin'
 import { useToast } from '@/composables/useToast'
 import Icon from '@/components/Icon.vue'
 import {
-  getRelationMatchQuestionTypeLabel,
   normalizeRelationMatchQueryValue,
 } from '@/utils/relationMatch'
 
@@ -109,10 +108,6 @@ function questionOptionText(option) {
   return option.option_text ?? option.text ?? option.label ?? ''
 }
 
-function questionTag(question) {
-  return question.scene_tag || getRelationMatchQuestionTypeLabel(question.question_type)
-}
-
 async function submitTest() {
   if (!test.value || !canSubmitAll.value) {
     toast.error('请先完成全部 40 题', 4000)
@@ -191,7 +186,6 @@ async function submitTest() {
               基础测试
             </div>
             <h1 class="page-title">40 题基础测试</h1>
-            <p class="text-sm text-text-secondary mt-1">只看总进度，不显示维度名。</p>
           </div>
 
           <div class="text-right text-xs text-text-secondary">
@@ -228,7 +222,6 @@ async function submitTest() {
       <section v-if="currentQuestion" class="card-base p-5 sm:p-6 space-y-4 min-h-[420px]">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-xs text-text-secondary mb-2">{{ questionTag(currentQuestion) }}</p>
             <h2 class="text-xl font-semibold text-text-primary leading-8">{{ currentQuestion.question_text }}</h2>
           </div>
           <span class="text-xs text-maple-700 bg-maple-50 px-2.5 py-1 rounded-full flex-shrink-0">

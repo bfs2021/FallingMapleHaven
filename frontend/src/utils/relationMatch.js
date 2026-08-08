@@ -9,13 +9,6 @@ export const RELATION_MATCH_DIMENSIONS = [
   { key: 'maturity', label: '成熟', hint: '沟通、边界感、处理问题能力' },
 ]
 
-export const RELATION_MATCH_QUESTION_TYPES = {
-  single_choice: '单选',
-  scale: '量表',
-  multi_select: '多选',
-  either_or: '二选一',
-}
-
 export const RELATION_MATCH_TYPES = {
   bestie: '死党型',
   siblings: '兄弟/姐妹型',
@@ -37,10 +30,6 @@ export const RELATION_MATCH_TYPES = {
 
 export function getRelationMatchTypeName(type) {
   return RELATION_MATCH_TYPES[type] || type || '关系型'
-}
-
-export function getRelationMatchQuestionTypeLabel(type) {
-  return RELATION_MATCH_QUESTION_TYPES[type] || '题目'
 }
 
 export function normalizeRelationMatchQueryValue(value) {
