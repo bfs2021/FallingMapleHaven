@@ -18,7 +18,7 @@ def seed_current_test(apps, schema_editor):
     for order, seed in enumerate(build_current_test_seed(), 1):
         question = RelationMatchQuestion.objects.create(
             test=test,
-            question_type="single_choice",
+            question_type=seed.question_type,
             question_text=seed.question_text,
             scene_tag=seed.scene_tag,
             order=order,

@@ -176,9 +176,29 @@ SCENE_TEXTS = (
 @dataclass(frozen=True, slots=True)
 class QuestionSeed:
     question_text: str
+    question_type: str
     scene_tag: str
     option_texts: tuple[str, ...]
     option_payloads: tuple[dict[str, int], ...]
+
+
+def _question_type_for(question_index: int) -> str:
+    """占位题按 Docs/18 §3 的题型分布分配：每维 3 单选 + 1 二选一 + 1（量表/多选）。"""
+    position = question_index % 5
+    dimension = question_index // 5
+    if position <= 2:
+        return "single_choice"
+    if position == 3:
+        return "either_or"
+    return "scale" if dimension % 2 == 0 else "multi_select"
+
+
+def _option_count_for(question_type: str) -> int:
+    if question_type == "either_or":
+        return 2
+    if question_type == "multi_select":
+        return 3
+    return 4
 
 
 def _option_payload(question_index: int, option_index: int) -> dict[str, int]:
@@ -195,7 +215,8 @@ def build_current_test_seed() -> tuple[QuestionSeed, ...]:
     questions: list[QuestionSeed] = []
     for question_index in range(40):
         scene = SCENE_TEXTS[question_index % len(SCENE_TEXTS)]
-        option_count = 2 + (question_index % 3)
+        question_type = _question_type_for(question_index)
+        option_count = _option_count_for(question_type)
         option_texts = tuple(
             f"选项 {question_index + 1}-{chr(65 + option_index)}"
             for option_index in range(option_count)
@@ -207,6 +228,7 @@ def build_current_test_seed() -> tuple[QuestionSeed, ...]:
         questions.append(
             QuestionSeed(
                 question_text=f"第 {question_index + 1} 题：面对{scene}，你更像哪一种反应？",
+                question_type=question_type,
                 scene_tag=scene,
                 option_texts=option_texts,
                 option_payloads=option_payloads,

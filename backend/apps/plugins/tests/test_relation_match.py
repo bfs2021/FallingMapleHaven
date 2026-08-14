@@ -81,6 +81,23 @@ class TestRelationMatchCatalog:
             option_count = question.options.count()
             assert 2 <= option_count <= 4
 
+    def test_current_test_question_type_distribution(self, client):
+        """占位题按 Docs/18 §3 分布：24 单选 + 8 二选一 + 4 量表 + 4 多选。"""
+        test = _current_test()
+        counts = {}
+        for question in test.questions.all():
+            counts[question.question_type] = counts.get(question.question_type, 0) + 1
+            if question.question_type == "either_or":
+                assert question.options.count() == 2
+            elif question.question_type == "multi_select":
+                assert question.options.count() == 3
+        assert counts == {
+            "single_choice": 24,
+            "either_or": 8,
+            "scale": 4,
+            "multi_select": 4,
+        }
+
     def test_only_one_non_deleted_test_is_allowed(self):
         with pytest.raises(ValidationError):
             RelationMatchTest.objects.create(
