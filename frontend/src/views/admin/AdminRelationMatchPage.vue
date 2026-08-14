@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { adminApi } from '@/api/admin'
 import Icon from '@/components/Icon.vue'
+import { RELATION_MATCH_DIMENSIONS } from '@/utils/relationMatch'
 
 const loading = ref(true)
 const error = ref('')
@@ -11,6 +12,51 @@ const submissions = ref([])
 const profiles = ref([])
 const pairs = ref([])
 const stats = ref(null)
+const selectedSubmission = ref(null)
+const submissionDetail = ref(null)
+const detailLoading = ref(false)
+
+const DIMENSION_LABELS = Object.fromEntries(
+  RELATION_MATCH_DIMENSIONS.map(dimension => [dimension.key, dimension.label]),
+)
+const QUESTION_TYPE_LABELS = {
+  single_choice: '单选',
+  scale: '量表',
+  multi_select: '多选',
+  either_or: '二选一',
+}
+
+function questionTypeLabel(type) {
+  return QUESTION_TYPE_LABELS[type] || type || '未知'
+}
+
+function formatDimensionPayload(payload) {
+  if (!payload || typeof payload !== 'object') return ''
+  return Object.entries(payload)
+    .filter(([, value]) => Number(value) > 0)
+    .map(([key, value]) => `${DIMENSION_LABELS[key] || key} +${value}`)
+    .join('、')
+}
+
+async function openSubmission(item) {
+  selectedSubmission.value = item
+  detailLoading.value = true
+  submissionDetail.value = null
+  try {
+    const res = await adminApi.relationMatchSubmissionDetail(item.id)
+    submissionDetail.value = res.data || null
+  } catch {
+    error.value = '答卷详情加载失败'
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function closeSubmission() {
+  selectedSubmission.value = null
+  submissionDetail.value = null
+  detailLoading.value = false
+}
 
 const tabList = [
   { key: 'tests', label: '测试' },
@@ -111,25 +157,76 @@ onMounted(fetchAll)
         </table>
       </div>
 
-      <div v-else-if="activeTab === 'submissions'" class="card-base overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="table-header bg-maple-50/60 text-text-secondary">
-            <tr>
-              <th class="text-left px-4 py-3 font-medium">ID</th>
-              <th class="text-left px-4 py-3 font-medium">参与者</th>
-              <th class="text-left px-4 py-3 font-medium">类型</th>
-              <th class="text-left px-4 py-3 font-medium">时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in submissions" :key="item.id" class="border-t border-border">
-              <td class="px-4 py-3 text-text-secondary">{{ item.id }}</td>
-              <td class="px-4 py-3 font-medium text-text-primary">{{ item.participant_name }}</td>
-              <td class="px-4 py-3 text-text-secondary">{{ item.participant_type }}</td>
-              <td class="px-4 py-3 text-text-secondary">{{ item.created_at }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div v-else-if="activeTab === 'submissions'">
+        <div v-if="selectedSubmission" class="card-base p-5 sm:p-6 space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="space-y-1">
+              <p class="page-title">{{ selectedSubmission.participant_name }} 的答卷</p>
+              <p class="text-sm text-text-secondary">
+                参与者类型：{{ selectedSubmission.participant_type }} · 提交时间：{{ selectedSubmission.created_at }}
+              </p>
+            </div>
+            <button class="btn-secondary px-3 py-2 min-h-[44px] text-sm" @click="closeSubmission">
+              <Icon name="arrowLeft" :size="16" />
+              返回列表
+            </button>
+          </div>
+
+          <div v-if="detailLoading" class="space-y-3">
+            <div class="skeleton h-5 w-48" />
+            <div v-for="i in 4" :key="i" class="skeleton h-16 w-full rounded-2xl" />
+          </div>
+
+          <div v-else-if="submissionDetail" class="space-y-3">
+            <div
+              v-for="(answer, index) in submissionDetail.answers"
+              :key="answer.id"
+              class="rounded-2xl border border-border bg-white p-4 space-y-2"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <p class="text-sm font-medium text-text-primary leading-6">
+                  <span class="text-maple-700 mr-1">{{ index + 1 }}.</span>{{ answer.question_text }}
+                </p>
+                <span class="text-xs text-maple-700 bg-maple-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                  {{ questionTypeLabel(answer.question_type) }}
+                </span>
+              </div>
+              <p class="text-sm text-maple-700">
+                选择：{{ (answer.selected_option_texts || []).join('、') || '—' }}
+              </p>
+              <p v-if="formatDimensionPayload(answer.dimension_payload)" class="text-xs text-text-secondary">
+                八维贡献：{{ formatDimensionPayload(answer.dimension_payload) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="card-base overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="table-header bg-maple-50/60 text-text-secondary">
+              <tr>
+                <th class="text-left px-4 py-3 font-medium">ID</th>
+                <th class="text-left px-4 py-3 font-medium">参与者</th>
+                <th class="text-left px-4 py-3 font-medium">类型</th>
+                <th class="text-left px-4 py-3 font-medium">时间</th>
+                <th class="text-left px-4 py-3 font-medium">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in submissions" :key="item.id" class="border-t border-border">
+                <td class="px-4 py-3 text-text-secondary">{{ item.id }}</td>
+                <td class="px-4 py-3 font-medium text-text-primary">{{ item.participant_name }}</td>
+                <td class="px-4 py-3 text-text-secondary">{{ item.participant_type }}</td>
+                <td class="px-4 py-3 text-text-secondary">{{ item.created_at }}</td>
+                <td class="px-4 py-3">
+                  <button class="btn-ghost px-3 py-1.5 text-sm min-h-[36px]" @click="openSubmission(item)">
+                    查看
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div v-else-if="activeTab === 'profiles'" class="card-base overflow-hidden">

@@ -14,6 +14,21 @@ DIMENSIONS = (
     "maturity",
 )
 
+DIMENSION_LABELS = {
+    "dominance": "主导",
+    "care": "照顾",
+    "dependence": "依赖",
+    "empathy": "共情",
+    "romance": "浪漫",
+    "playfulness": "玩乐",
+    "stability": "稳定",
+    "maturity": "成熟",
+}
+
+
+def dimension_label(key: str) -> str:
+    return DIMENSION_LABELS.get(key, key)
+
 RELATION_TYPES: dict[str, dict[str, str]] = {
     "bestie": {
         "name": "死党型",
@@ -206,5 +221,5 @@ def build_user_short_summary(dimension_scores: dict[str, int]) -> str:
     if not top:
         return "你是一个风格稳定、表达清楚的参与者。"
     if len(top) == 1:
-        return f"你更像一个{top[0][0]}感很强的参与者。"
-    return f"你更像一个{top[0][0]}、{top[1][0]}都比较突出的参与者。"
+        return f"你更像一个{dimension_label(top[0][0])}很突出的参与者。"
+    return f"你更像一个{dimension_label(top[0][0])}、{dimension_label(top[1][0])}都比较突出的参与者。"

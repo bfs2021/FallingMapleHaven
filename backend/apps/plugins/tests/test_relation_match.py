@@ -343,6 +343,22 @@ class TestRelationMatchAdminHooks:
         assert pairs_resp.json()["data"]["total"] >= 1
         assert stats_resp.json()["data"]["total_pairs"] >= 1
 
+    def test_admin_submission_detail_includes_option_texts(self, admin_client, alice_client):
+        test = _current_test()
+        submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        assert submit.status_code == 201
+        submission = RelationMatchTestAnswer.objects.latest("id")
+        resp = admin_client.get(reverse("admin-relation-match-submission-detail", args=[submission.id]))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        answers = data["answers"]
+        assert len(answers) == 40
+        first = answers[0]
+        assert first["question_text"]
+        assert first["question_type"]
+        assert first["selected_option_texts"]
+        assert first["selected_option_texts"][0]
+
 
 class TestRelationMatchMyPage:
     def test_visitor_my_returns_empty_state_and_sets_cookie(self, client):
@@ -461,3 +477,34 @@ class TestRelationMatchResultLink:
         resp = client.get(_url("pair-detail", result_id))
         assert resp.status_code == 200
         assert resp.json()["data"]["id"] == result_id
+
+
+class TestRelationMatchLocalizedText:
+    DIMENSION_KEYS = [
+        "dominance", "care", "dependence", "empathy",
+        "romance", "playfulness", "stability", "maturity",
+    ]
+    DIMENSION_LABELS = ["主导", "照顾", "依赖", "共情", "浪漫", "玩乐", "稳定", "成熟"]
+
+    def test_profile_summary_uses_chinese_dimension_names(self, alice_client, alice):
+        test = _current_test()
+        resp = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        assert resp.status_code == 201
+        profile = RelationMatchProfile.objects.get(user=alice, test=test)
+        summary = profile.summary_text
+        for key in self.DIMENSION_KEYS:
+            assert key not in summary
+        assert any(label in summary for label in self.DIMENSION_LABELS)
+
+    def test_pair_result_text_uses_chinese_dimension_names(self, alice_client, bob_client):
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        bob_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = alice_submit.json()["data"]["share_code"]
+        match = bob_client.post(_url("share-match", share_code), {}, format="json")
+        assert match.status_code == 200
+        data = match.json()["data"]
+        for field in ("summary_a", "summary_b", "relation_explain"):
+            for key in self.DIMENSION_KEYS:
+                assert key not in data[field]
+        assert any(label in data["summary_a"] or label in data["summary_b"] for label in self.DIMENSION_LABELS)

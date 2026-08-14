@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from ...notifications.models import Notification
-from .catalog import DIMENSIONS, RELATION_TYPES, build_user_short_summary
+from .catalog import DIMENSIONS, RELATION_TYPES, build_user_short_summary, dimension_label
 from .models import (
     BASE_QUESTION_COUNT,
     RelationMatchPairResult,
@@ -244,7 +244,8 @@ def build_pair_compare(profile_a: RelationMatchProfile, profile_b: RelationMatch
 def build_pair_result_text(profile_a: RelationMatchProfile, profile_b: RelationMatchProfile, relation_type: str):
     relation_data = RELATION_TYPES[relation_type]
     compare = build_pair_compare(profile_a, profile_b)
-    top_dimension = max(compare.items(), key=lambda item: item[1]["shared"])[0]
+    top_dimension_key = max(compare.items(), key=lambda item: item[1]["shared"])[0]
+    top_dimension = dimension_label(top_dimension_key)
     participant_a = getattr(profile_a, "participant_name", "")
     participant_b = getattr(profile_b, "participant_name", "")
     summary_a = f"{participant_a} 更偏向在{top_dimension}和{relation_data['role_a']}上表现明显。"

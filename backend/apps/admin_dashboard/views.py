@@ -705,16 +705,26 @@ class AdminRelationMatchSubmissionDetailView(APIView, AdminPermissionMixin):
             return api_response(code=40004, message="答卷不存在", status=status.HTTP_404_NOT_FOUND)
 
         data = admin_relation_match_submission_data(submission)
-        data["answers"] = [
-            {
+        answers = []
+        for item in submission.items.all().order_by("question__order"):
+            question = item.question
+            option_text_map = {
+                option.id: option.option_text
+                for option in question.options.all().order_by("order")
+            }
+            selected_options = item.selected_options
+            if not isinstance(selected_options, list):
+                selected_options = [selected_options]
+            answers.append({
                 "id": item.id,
                 "question_id": item.question_id,
-                "question_text": item.question.question_text,
+                "question_text": question.question_text,
+                "question_type": question.question_type,
                 "selected_options": item.selected_options,
+                "selected_option_texts": [option_text_map.get(option_id, "") for option_id in selected_options],
                 "dimension_payload": item.dimension_payload,
-            }
-            for item in submission.items.all().order_by("question__order")
-        ]
+            })
+        data["answers"] = answers
         return api_response(data=data)
 
 
