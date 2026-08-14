@@ -188,3 +188,6 @@ audit_report.json
 .opencode
 .agents
 .playwright-mcp
+
+# Node / Frontend
+node_modules/
