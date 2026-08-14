@@ -27,6 +27,8 @@ export const relationMatchApi = {
   matchProfile: (shareCode, data) => client.post(`/plugins/relation-match/shares/${shareCode}/match/`, data),
   getPairResult: (pairId) => client.get(`/plugins/relation-match/pairs/${pairId}/`),
   myPairs: (params) => client.get('/plugins/relation-match/my/pairs/', { params }),
+  getMy: () => client.get('/plugins/relation-match/my/'),
+  getShareInfo: (shareCode) => client.get(`/plugins/relation-match/shares/${shareCode}/`),
 }
 
 export const questionBoxApi = {

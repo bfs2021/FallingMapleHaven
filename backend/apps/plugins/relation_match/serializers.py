@@ -59,7 +59,9 @@ class RelationMatchProfileSummarySerializer(serializers.ModelSerializer):
         return user_brief(obj.user)
 
     def get_share_url(self, obj):
-        return f"/profile/{obj.user_id or obj.id}/plugins/relation-match?shareCode={obj.share_code}"
+        if obj.participant_type == "visitor":
+            return f"/plugins/relation-match/join?shareCode={obj.share_code}"
+        return f"/profile/{obj.user_id}/plugins/relation-match?shareCode={obj.share_code}"
 
 
 class RelationMatchPairResultDetailSerializer(serializers.ModelSerializer):
@@ -92,7 +94,7 @@ class RelationMatchPairResultDetailSerializer(serializers.ModelSerializer):
         return RELATION_TYPES[obj.relation_type]["name"]
 
     def get_share_url(self, obj):
-        return f"/profile/{obj.profile_a.user_id or obj.profile_a.id}/plugins/relation-match/pairs/{obj.id}/"
+        return f"/plugins/relation-match/pairs/{obj.id}/"
 
 
 class RelationMatchHistoryItemSerializer(serializers.Serializer):
@@ -112,7 +114,9 @@ class RelationMatchHomeProfileSerializer(serializers.ModelSerializer):
         fields = ["id", "participant_name", "share_code", "share_url"]
 
     def get_share_url(self, obj):
-        return f"/profile/{obj.user_id or obj.id}/plugins/relation-match?shareCode={obj.share_code}"
+        if obj.participant_type == "visitor":
+            return f"/plugins/relation-match/join?shareCode={obj.share_code}"
+        return f"/profile/{obj.user_id}/plugins/relation-match?shareCode={obj.share_code}"
 
 
 class RelationMatchCurrentTestSerializer(serializers.ModelSerializer):
@@ -128,4 +132,5 @@ class RelationMatchSubmissionResponseSerializer(serializers.Serializer):
     next_action = serializers.CharField()
     share_code = serializers.CharField()
     share_url = serializers.CharField()
+    result_url = serializers.CharField(allow_null=True, required=False)
     pair = RelationMatchPairResultDetailSerializer(allow_null=True)

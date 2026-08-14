@@ -125,6 +125,26 @@ const routes = [
     component: () => import('@/views/NotificationsPage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/plugins/relation-match/my',
+    name: 'RelationMatchMyPage',
+    component: () => import('@/views/RelationMatchMyPage.vue'),
+  },
+  {
+    path: '/plugins/relation-match/join',
+    name: 'RelationMatchJoinPage',
+    component: () => import('@/views/RelationMatchJoinPage.vue'),
+  },
+  {
+    path: '/plugins/relation-match/pairs/:pairId',
+    name: 'RelationMatchPairResultStandalone',
+    component: () => import('@/views/RelationMatchPairResultPage.vue'),
+  },
+  {
+    path: '/plugins/relation-match/tests/current',
+    name: 'RelationMatchTestStandalone',
+    component: () => import('@/views/RelationMatchTestPage.vue'),
+  },
   ...adminRoutes,
   {
     path: '/:pathMatch(.*)*',

@@ -4,9 +4,11 @@ from .views import (
     RelationMatchCurrentTestSubmissionView,
     RelationMatchCurrentTestView,
     RelationMatchHomeView,
-    RelationMatchPairDetailView,
-    RelationMatchShareMatchView,
+    RelationMatchMyView,
     RelationMatchMyPairsView,
+    RelationMatchPairDetailView,
+    RelationMatchShareDetailView,
+    RelationMatchShareMatchView,
 )
 
 urlpatterns = [
@@ -17,7 +19,9 @@ urlpatterns = [
         RelationMatchCurrentTestSubmissionView.as_view(),
         name="relation-match-current-submission",
     ),
+    path("shares/<str:share_code>/", RelationMatchShareDetailView.as_view(), name="relation-match-share-detail"),
     path("shares/<str:share_code>/match/", RelationMatchShareMatchView.as_view(), name="relation-match-share-match"),
     path("pairs/<int:result_id>/", RelationMatchPairDetailView.as_view(), name="relation-match-pair-detail"),
+    path("my/", RelationMatchMyView.as_view(), name="relation-match-my"),
     path("my/pairs/", RelationMatchMyPairsView.as_view(), name="relation-match-my-pairs"),
 ]

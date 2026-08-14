@@ -22,6 +22,24 @@ def _active_relation_match_plugin(db):
     )
 
 
+@pytest.fixture(autouse=True)
+def _no_anon_throttle(settings):
+    """访客流程会产生大量匿名请求，禁用 AnonRateThrottle 避免 429（与 test_accounts.py 保持一致）"""
+    from django.core.cache import cache
+
+    cache.clear()
+    current = dict(settings.REST_FRAMEWORK)
+    rates = dict(current.get("DEFAULT_THROTTLE_RATES", {}))
+    rates["anon"] = None  # Disable anon throttling
+    current["DEFAULT_THROTTLE_RATES"] = rates
+    settings.REST_FRAMEWORK = current
+    from rest_framework.settings import api_settings
+
+    api_settings._cached_attrs.discard("DEFAULT_THROTTLE_RATES")
+    api_settings.__dict__.pop("DEFAULT_THROTTLE_RATES", None)
+    api_settings.__dict__.pop("_user_settings", None)
+
+
 def _url(name, *args):
     return reverse(f"relation-match-{name}", args=args)
 
@@ -109,6 +127,46 @@ class TestRelationMatchVisitorFlow:
         assert profile.visitor_token_hash != client.cookies["fmh_relation_visitor_id"].value
         assert RelationMatchTestAnswerItem.objects.filter(answer=answer).count() == 40
         assert resp.json()["data"]["next_action"] == "invite"
+        assert resp.json()["data"]["result_url"] is None
+
+    def test_visitor_share_url_points_to_join_route(self, client):
+        """访客画像 share_url 必须指向独立落地路由，严禁回退到画像自身 id。"""
+        test = _current_test()
+        client.get(_url("current-test"))
+        resp = client.post(_url("current-submission"), _answer_payload(test, participant_name="秋风"), format="json")
+        assert resp.status_code == 201
+        data = resp.json()["data"]
+        share_url = data["share_url"]
+        assert share_url.startswith("/plugins/relation-match/join?shareCode=")
+        assert f"/profile/{data['profile']['id']}/" not in share_url
+
+    def test_logged_in_share_url_points_to_profile_route(self, alice_client, alice):
+        """登录用户画像 share_url 指向自己的插件主页。"""
+        test = _current_test()
+        resp = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        assert resp.status_code == 201
+        share_url = resp.json()["data"]["share_url"]
+        assert share_url == f"/profile/{alice.id}/plugins/relation-match?shareCode={resp.json()['data']['share_code']}"
+
+    def test_visitor_submit_with_share_code_auto_matches(self, client, alice_client, alice):
+        """访客从分享链接答题，提交携带 share_code，答完自动匹配并返回 result_url。"""
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        assert alice_submit.status_code == 201
+        share_code = alice_submit.json()["data"]["share_code"]
+
+        client.get(_url("current-test"))
+        payload = _answer_payload(test, participant_name="小明")
+        payload["share_code"] = share_code
+        resp = client.post(_url("current-submission"), payload, format="json")
+        assert resp.status_code == 201
+        data = resp.json()["data"]
+        assert data["next_action"] == "match"
+        assert data["result_url"].startswith("/plugins/relation-match/pairs/")
+        assert data["pair"]["id"]
+        assert RelationMatchPairResult.objects.count() == 1
+        # 访客生成结果不通知（recipient 为访客的用户不存在，登录方 Alice 收到通知）
+        assert Notification.objects.filter(notification_type=Notification.Type.PLUGIN_EVENT).count() == 1
 
     def test_visitor_duplicate_submit_is_rejected(self, client):
         test = _current_test()
@@ -129,9 +187,13 @@ class TestRelationMatchVisitorFlow:
         assert second.status_code == 400
         assert second.json()["code"] == 40005
 
-    def test_visitor_history_requires_login(self, client):
+    def test_visitor_history_returns_empty_and_sets_cookie(self, client):
         resp = client.get(_url("my-pairs"))
-        assert resp.status_code == 403
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["total"] == 0
+        assert body["results"] == []
+        assert resp.cookies.get("fmh_relation_visitor_id") is not None
 
     def test_multi_select_single_choice_is_stored_as_array(self, client):
         test = _current_test()
@@ -280,3 +342,122 @@ class TestRelationMatchAdminHooks:
         assert profiles_resp.json()["data"]["total"] >= 2
         assert pairs_resp.json()["data"]["total"] >= 1
         assert stats_resp.json()["data"]["total_pairs"] >= 1
+
+
+class TestRelationMatchMyPage:
+    def test_visitor_my_returns_empty_state_and_sets_cookie(self, client):
+        """访客未答题时 my/ 返回 has_profile=False、share_code/share_url 为 null。"""
+        resp = client.get(_url("my"))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["has_profile"] is False
+        assert data["profile"] is None
+        assert data["share_code"] is None
+        assert data["share_url"] is None
+        assert data["history"]["results"] == []
+        assert resp.cookies.get("fmh_relation_visitor_id") is not None
+
+    def test_visitor_my_returns_state_and_history_after_match(self, client, alice_client):
+        """访客答完并参与匹配后，my/ 返回其画像状态与匹配历史。"""
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = alice_submit.json()["data"]["share_code"]
+
+        client.get(_url("current-test"))
+        payload = _answer_payload(test, participant_name="小明")
+        payload["share_code"] = share_code
+        client.post(_url("current-submission"), payload, format="json")
+
+        resp = client.get(_url("my"))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["has_profile"] is True
+        assert data["share_code"]
+        assert data["share_url"].startswith("/plugins/relation-match/join?shareCode=")
+        assert data["history"]["total"] == 1
+        assert data["history"]["results"][0]["result_url"].startswith("/plugins/relation-match/pairs/")
+        assert data["next_action"] == "match"
+
+    def test_logged_in_my_returns_own_state(self, alice_client, alice):
+        test = _current_test()
+        submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        assert submit.status_code == 201
+        resp = alice_client.get(_url("my"))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["has_profile"] is True
+        assert data["share_url"] == f"/profile/{alice.id}/plugins/relation-match?shareCode={data['share_code']}"
+
+    def test_visitor_my_pairs_after_match(self, client, alice_client):
+        """访客按 Cookie 哈希可查看自己的匹配历史（允许未登录）。"""
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = alice_submit.json()["data"]["share_code"]
+
+        client.get(_url("current-test"))
+        payload = _answer_payload(test, participant_name="小明")
+        payload["share_code"] = share_code
+        client.post(_url("current-submission"), payload, format="json")
+
+        resp = client.get(_url("my-pairs"))
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["total"] == 1
+        assert body["results"][0]["result_url"].startswith("/plugins/relation-match/pairs/")
+
+
+class TestRelationMatchShareDetail:
+    def test_share_detail_returns_profile_summary(self, alice_client):
+        test = _current_test()
+        submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = submit.json()["data"]["share_code"]
+        resp = alice_client.get(_url("share-detail", share_code))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["share_code"] == share_code
+        assert data["participant_name"]
+
+    def test_share_detail_unknown_code_returns_404(self, client):
+        resp = client.get(_url("share-detail", "000000"))
+        assert resp.status_code == 404
+        assert resp.json()["code"] == 40004
+
+    def test_visitor_share_detail_returns_join_route_url(self, client, alice_client):
+        """访客画像的 share_url 通过落地接口返回时必须指向独立落地路由。"""
+        test = _current_test()
+        client.get(_url("current-test"))
+        submit = client.post(_url("current-submission"), _answer_payload(test, participant_name="秋风"), format="json")
+        share_code = submit.json()["data"]["share_code"]
+
+        resp = client.get(_url("share-detail", share_code))
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["share_url"].startswith("/plugins/relation-match/join?shareCode=")
+
+
+class TestRelationMatchResultLink:
+    def test_pair_result_share_url_is_independent_route(self, alice_client, bob_client):
+        """结果 share_url 必须为独立路由 /plugins/relation-match/pairs/{id}/。"""
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        bob_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = alice_submit.json()["data"]["share_code"]
+        match = bob_client.post(_url("share-match", share_code), {}, format="json")
+        result_id = match.json()["data"]["id"]
+
+        detail = bob_client.get(_url("pair-detail", result_id))
+        assert detail.status_code == 200
+        assert detail.json()["data"]["share_url"] == f"/plugins/relation-match/pairs/{result_id}/"
+
+    def test_pair_detail_accessible_without_login(self, client, alice_client, bob_client):
+        """结果链接即授权：未登录也可打开独立路由结果页。"""
+        test = _current_test()
+        alice_submit = alice_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        bob_client.post(_url("current-submission"), _answer_payload(test), format="json")
+        share_code = alice_submit.json()["data"]["share_code"]
+        match = bob_client.post(_url("share-match", share_code), {}, format="json")
+        result_id = match.json()["data"]["id"]
+
+        resp = client.get(_url("pair-detail", result_id))
+        assert resp.status_code == 200
+        assert resp.json()["data"]["id"] == result_id

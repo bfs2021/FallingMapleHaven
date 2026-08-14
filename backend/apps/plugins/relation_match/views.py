@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 from apps.common.utils import api_response, safe_int
@@ -104,7 +104,7 @@ class RelationMatchHomeView(APIView):
                     "relation_type_name": RELATION_TYPES[str(result.relation_type)]["name"],
                     "subtitle": result.subtitle,
                     "other_participant_name": other_name,
-                    "result_url": f"/profile/{owner_id}/plugins/relation-match/pairs/{result_id}/",
+                    "result_url": f"/plugins/relation-match/pairs/{result_id}/",
                     "created_at": result.created_at,
                 })
             response_data["history"] = {"total": len(history_items), "page": 1, "page_size": 20, "results": history_items}
@@ -245,15 +245,13 @@ class RelationMatchCurrentTestSubmissionView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        profile_user_id = getattr(profile, "user_id", None)
-        profile_id = getattr(profile, "id", None)
-        share_url = f"/profile/{profile_user_id or profile_id}/plugins/relation-match?shareCode={profile.share_code}"
         profile_payload = RelationMatchProfileSummarySerializer(profile).data
         data = {
             "profile": profile_payload,
             "next_action": "match" if pair_result else "invite",
             "share_code": profile.share_code,
-            "share_url": share_url,
+            "share_url": profile_payload["share_url"],
+            "result_url": f"/plugins/relation-match/pairs/{pair_result.id}/" if pair_result else None,
             "pair": RelationMatchPairResultDetailSerializer(pair_result).data if pair_result else None,
         }
         response = api_response(data=data, status=status.HTTP_201_CREATED)
@@ -311,15 +309,20 @@ class RelationMatchPairDetailView(APIView):
 
 
 class RelationMatchMyPairsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         inactive = ensure_plugin_active("relation_match")
         if inactive:
             return inactive
-        profiles = RelationMatchProfile.objects.filter(user=request.user)
+        if request.user.is_authenticated:
+            profiles = RelationMatchProfile.objects.filter(user=request.user)
+        else:
+            _token, token_hash, _ = _ensure_visitor_cookie(request)
+            profiles = RelationMatchProfile.objects.filter(visitor_token_hash=token_hash)
         if not profiles.exists():
-            return api_response(data={"total": 0, "page": 1, "page_size": 20, "results": []})
+            response = api_response(data={"total": 0, "page": 1, "page_size": 20, "results": []})
+            return _response_with_cookie(response, request)
         profile_ids = list(profiles.values_list("id", flat=True))
         queryset = RelationMatchPairResult.objects.filter(profile_a_id__in=profile_ids) | RelationMatchPairResult.objects.filter(profile_b_id__in=profile_ids)
         queryset = queryset.select_related("profile_a", "profile_b").order_by("-created_at").distinct()
@@ -330,8 +333,8 @@ class RelationMatchMyPairsView(APIView):
         end = start + page_size
         items = []
         for result in queryset[start:end]:
-            profile_a_user_id = getattr(result.profile_a, "user_id", None)
-            other = result.profile_b if profile_a_user_id == request.user.id else result.profile_a
+            profile_a_id = getattr(result.profile_a, "id", None)
+            other = result.profile_b if profile_a_id in profile_ids else result.profile_a
             other_name = getattr(other, "participant_name", "")
             result_id = getattr(result, "id", None)
             items.append({
@@ -339,7 +342,93 @@ class RelationMatchMyPairsView(APIView):
                 "relation_type_name": RELATION_TYPES[str(result.relation_type)]["name"],
                 "subtitle": result.subtitle,
                 "other_participant_name": other_name,
-                "result_url": f"/profile/{request.user.id}/plugins/relation-match/pairs/{result_id}/",
+                "result_url": f"/plugins/relation-match/pairs/{result_id}/",
                 "created_at": result.created_at,
             })
-        return api_response(data={"total": total, "page": page, "page_size": page_size, "results": items})
+        response = api_response(data={"total": total, "page": page, "page_size": page_size, "results": items})
+        return _response_with_cookie(response, request)
+
+
+def _build_history_payload(queryset, profile_ids):
+    """将关系结果 queryset 组装为 RelationMatchHome.history 结构（独立结果路由）。"""
+    items = []
+    for result in queryset:
+        profile_a_id = getattr(result.profile_a, "id", None)
+        other = result.profile_b if profile_a_id in profile_ids else result.profile_a
+        other_name = getattr(other, "participant_name", "")
+        result_id = getattr(result, "id", None)
+        items.append({
+            "pair_id": result_id,
+            "relation_type_name": RELATION_TYPES[str(result.relation_type)]["name"],
+            "subtitle": result.subtitle,
+            "other_participant_name": other_name,
+            "result_url": f"/plugins/relation-match/pairs/{result_id}/",
+            "created_at": result.created_at,
+        })
+    return {"total": len(items), "page": 1, "page_size": 20, "results": items}
+
+
+class RelationMatchMyView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
+
+        if request.user.is_authenticated:
+            profile = RelationMatchProfile.objects.filter(user_id=request.user.id, test__slug="current").first()
+            profile_ids = [profile.id] if profile else []
+            pairs = RelationMatchPairResult.objects.filter(
+                profile_a_id__in=profile_ids
+            ) | RelationMatchPairResult.objects.filter(profile_b_id__in=profile_ids)
+            pairs = pairs.order_by("-created_at").distinct() if profile_ids else pairs.none()
+        else:
+            _token, token_hash, _ = _ensure_visitor_cookie(request)
+            profile = RelationMatchProfile.objects.filter(visitor_token_hash=token_hash, test__slug="current").first()
+            profile_ids = [profile.id] if profile else []
+            pairs = RelationMatchPairResult.objects.filter(
+                profile_a_id__in=profile_ids
+            ) | RelationMatchPairResult.objects.filter(profile_b_id__in=profile_ids)
+            pairs = pairs.order_by("-created_at").distinct() if profile_ids else pairs.none()
+
+        history = _build_history_payload(pairs, profile_ids)
+        if profile is None:
+            response_data = {
+                "has_profile": False,
+                "profile": None,
+                "entry_text": "看看你们像什么",
+                "start_test_url": "/plugins/relation-match/join",
+                "share_code": None,
+                "share_url": None,
+                "next_action": "invite",
+                "history": history,
+            }
+        else:
+            response_data = {
+                "has_profile": True,
+                "profile": RelationMatchHomeProfileSerializer(profile).data,
+                "entry_text": "看看你们像什么",
+                "start_test_url": "/plugins/relation-match/join",
+                "share_code": profile.share_code,
+                "share_url": RelationMatchHomeProfileSerializer(profile).data["share_url"],
+                "next_action": "match" if history["total"] else "invite",
+                "history": history,
+            }
+        response = api_response(data=response_data)
+        return _response_with_cookie(response, request)
+
+
+class RelationMatchShareDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, share_code):
+        inactive = ensure_plugin_active("relation_match")
+        if inactive:
+            return inactive
+        try:
+            profile = RelationMatchProfile.objects.get(share_code=share_code, test__slug="current")
+        except ObjectDoesNotExist:
+            return api_response(code=40004, message="分享码不存在", status=status.HTTP_404_NOT_FOUND)
+        response = api_response(data=RelationMatchProfileSummarySerializer(profile).data)
+        return _response_with_cookie(response, request)
