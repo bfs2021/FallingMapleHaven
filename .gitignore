@@ -191,3 +191,4 @@ audit_report.json
 
 # Node / Frontend
 node_modules/
+/.zcode
