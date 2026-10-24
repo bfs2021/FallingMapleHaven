@@ -6,7 +6,7 @@ import { relationMatchApi } from '@/api/plugin'
 import { useToast } from '@/composables/useToast'
 import AvatarImage from '@/components/AvatarImage.vue'
 import Icon from '@/components/Icon.vue'
-import { normalizeRelationMatchQueryValue } from '@/utils/relationMatch'
+import { isOwnRelationMatchShare, normalizeRelationMatchQueryValue } from '@/utils/relationMatch'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,7 +43,15 @@ async function loadShareInfo() {
   loading.value = true
   shareError.value = false
   try {
-    const res = await relationMatchApi.getShareInfo(code)
+    const [res, myRes] = await Promise.all([
+      relationMatchApi.getShareInfo(code),
+      relationMatchApi.getMy().catch(() => null),
+    ])
+    // 分享人自己打开自己的链接：回到自己的插件主页，不展示邀请页（Docs/16 §6.7）
+    if (isOwnRelationMatchShare(myRes?.data, code)) {
+      router.replace(buildSelfOpenTarget())
+      return
+    }
     sharer.value = res.data || null
   } catch (error) {
     sharer.value = null
@@ -55,6 +63,13 @@ async function loadShareInfo() {
   } finally {
     loading.value = false
   }
+}
+
+function buildSelfOpenTarget() {
+  if (authStore.isAuthenticated && authStore.user?.user_id) {
+    return { name: 'RelationMatchPage', params: { userId: authStore.user.user_id } }
+  }
+  return { name: 'RelationMatchMyPage' }
 }
 
 function buildTestTarget() {

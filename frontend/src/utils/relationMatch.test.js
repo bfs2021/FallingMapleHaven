@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   buildRelationMatchDimensionInsight,
   formatRelationMatchTendency,
+  isOwnRelationMatchShare,
 } from './relationMatch.js'
 
 test('formatRelationMatchTendency maps compare directions', () => {
@@ -23,4 +24,13 @@ test('buildRelationMatchDimensionInsight mentions shared gap and tendency', () =
   assert.match(text, /共同值为 7\/10/)
   assert.match(text, /差值为 2\/10/)
   assert.match(text, /A 方更高/)
+})
+
+test('isOwnRelationMatchShare only matches the visitor own share code', () => {
+  const myData = { has_profile: true, profile: { share_code: '030926' } }
+  assert.equal(isOwnRelationMatchShare(myData, '030926'), true)
+  assert.equal(isOwnRelationMatchShare(myData, '119305'), false)
+  assert.equal(isOwnRelationMatchShare(myData, ''), false)
+  assert.equal(isOwnRelationMatchShare({ has_profile: false, profile: null }, '030926'), false)
+  assert.equal(isOwnRelationMatchShare(null, '030926'), false)
 })

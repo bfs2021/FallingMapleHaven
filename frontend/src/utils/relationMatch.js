@@ -37,6 +37,12 @@ export function normalizeRelationMatchQueryValue(value) {
   return typeof value === 'string' ? value : ''
 }
 
+export function isOwnRelationMatchShare(myData, shareCode) {
+  const code = normalizeRelationMatchQueryValue(shareCode).trim()
+  if (!code) return false
+  return Boolean(myData?.has_profile) && String(myData?.profile?.share_code || '') === code
+}
+
 export function formatRelationMatchTendency(tendency) {
   if (tendency === 'a') return 'A 方更高'
   if (tendency === 'b') return 'B 方更高'
