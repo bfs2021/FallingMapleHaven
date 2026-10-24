@@ -7,7 +7,13 @@ from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from ...notifications.models import Notification
-from .catalog import DIMENSIONS, RELATION_TYPES, build_user_short_summary, dimension_label
+from .catalog import (
+    DIMENSIONS,
+    RELATION_TYPES,
+    build_dimension_max_raw_scores,
+    build_user_short_summary,
+    dimension_label,
+)
 from .models import (
     BASE_QUESTION_COUNT,
     RelationMatchPairResult,
@@ -91,11 +97,16 @@ def resolve_submission_context(request, participant_name: str | None):
     ), (visitor_token, visitor_hash, created, None)
 
 
+MAX_RAW_SCORES = build_dimension_max_raw_scores()
+
+
 def normalize_dimension_scores(raw_scores: dict[str, int]) -> dict[str, int]:
+    """按 Docs/18 §6：每维原始分满分映射到 1-10，两端各留 1 分和 10 分。"""
     normalized: dict[str, int] = {}
     for dimension in DIMENSIONS:
         score = raw_scores.get(dimension, 0)
-        normalized[dimension] = max(1, min(10, 1 + round(score / 8)))
+        max_raw = MAX_RAW_SCORES[dimension]
+        normalized[dimension] = max(1, min(10, 1 + round(score * 9 / max_raw)))
     return normalized
 
 
@@ -205,7 +216,7 @@ def select_relation_type(profile_a: RelationMatchProfile, profile_b: RelationMat
         return "contrast"
     if gaps["dependence"] >= 4 and gaps["stability"] <= 2:
         return "complementary"
-    if gaps["care"] <= 2 and gaps["playfulness"] <= 3:
+    if gaps["care"] <= 2 and gaps["playfulness"] <= 3 and play_sum >= 10:
         return "bestie"
     if gaps["dominance"] >= 4 and gaps["empathy"] <= 3:
         return "teacher_student"

@@ -4,6 +4,12 @@ from django.urls import reverse
 
 from apps.notifications.models import Notification
 from apps.plugins.models import Plugin
+from apps.plugins.relation_match.catalog import (
+    DIMENSIONS,
+    RELATION_TYPES,
+    build_current_test_seed,
+    build_dimension_max_raw_scores,
+)
 from apps.plugins.relation_match.models import (
     RelationMatchPairResult,
     RelationMatchProfile,
@@ -11,6 +17,11 @@ from apps.plugins.relation_match.models import (
     RelationMatchTest,
     RelationMatchTestAnswer,
     RelationMatchTestAnswerItem,
+)
+from apps.plugins.relation_match.services import (
+    normalize_dimension_scores,
+    score_answers,
+    select_relation_type,
 )
 
 
@@ -82,7 +93,7 @@ class TestRelationMatchCatalog:
             assert 2 <= option_count <= 4
 
     def test_current_test_question_type_distribution(self, client):
-        """占位题按 Docs/18 §3 分布：24 单选 + 8 二选一 + 4 量表 + 4 多选。"""
+        """Docs/18 §3 分布：24 单选 + 8 二选一 + 4 量表 + 4 多选。"""
         test = _current_test()
         counts = {}
         for question in test.questions.all():
@@ -90,7 +101,7 @@ class TestRelationMatchCatalog:
             if question.question_type == "either_or":
                 assert question.options.count() == 2
             elif question.question_type == "multi_select":
-                assert question.options.count() == 3
+                assert question.options.count() == 4
         assert counts == {
             "single_choice": 24,
             "either_or": 8,
@@ -105,6 +116,126 @@ class TestRelationMatchCatalog:
                 title="另一套测试",
                 status=RelationMatchTest.Status.DRAFT,
             )
+
+
+def _scores(base=5, **overrides):
+    scores = dict.fromkeys(DIMENSIONS, base)
+    scores.update(overrides)
+    return scores
+
+
+def _profile_of(scores):
+    return RelationMatchProfile(participant_name="校准", dimension_scores=scores)
+
+
+# 16 类关系类型的可达性配对：每组画像对精心避开前置分支，命中目标类型（Docs/18 §6.2）。
+_REACHABLE_PAIRS = {
+    "twin": (_scores(10), _scores(10)),
+    "mirror": (_scores(1), _scores(1)),
+    "frienemy": (
+        _scores(dominance=10, maturity=10, playfulness=8),
+        _scores(dominance=1, maturity=1, playfulness=8),
+    ),
+    "harbor": (
+        _scores(dominance=1, care=10, romance=1, playfulness=1, stability=10),
+        _scores(dominance=9, care=10, romance=9, playfulness=8, stability=10),
+    ),
+    "companion": (
+        _scores(care=7, stability=6, dominance=1, romance=1, playfulness=1),
+        _scores(care=7, stability=6, dominance=9, romance=9, playfulness=8),
+    ),
+    "confidant": (
+        _scores(dominance=1, care=1, dependence=1, romance=1, playfulness=1),
+        _scores(dominance=10, dependence=10, romance=10, playfulness=8),
+    ),
+    "contrast": (_scores(2, romance=10), _scores(8, romance=1, playfulness=6)),
+    "complementary": (
+        _scores(dependence=10, empathy=3),
+        _scores(dependence=5, empathy=7, dominance=9, romance=9, playfulness=9),
+    ),
+    "bestie": (
+        _scores(dominance=2, care=6, dependence=6, empathy=3, romance=5, playfulness=7, stability=1, maturity=6),
+        _scores(dominance=6, care=6, dependence=6, empathy=9, romance=9, playfulness=8, stability=5, maturity=6),
+    ),
+    "teacher_student": (
+        _scores(dominance=10, care=9, empathy=5, playfulness=2, maturity=2),
+        _scores(dominance=2, care=3, empathy=8, playfulness=7, maturity=5),
+    ),
+    "growing": (
+        _scores(maturity=10, playfulness=2, romance=2),
+        _scores(maturity=2, playfulness=7, romance=9),
+    ),
+    "adventure": (
+        _scores(empathy=8, romance=9, playfulness=10, stability=8),
+        _scores(empathy=4, romance=2, playfulness=3, stability=2),
+    ),
+    "healing": (
+        _scores(care=8, dependence=10, empathy=8, romance=2, playfulness=5, stability=7),
+        _scores(care=4, dependence=2, empathy=4, romance=9, playfulness=7, stability=3),
+    ),
+    "siblings": (
+        _scores(care=8, empathy=8, romance=10, playfulness=6, stability=5),
+        _scores(care=5, empathy=4, romance=1, playfulness=4, stability=2),
+    ),
+    "parent_child": (
+        _scores(dominance=9, care=6, empathy=2, romance=2, playfulness=3, stability=3),
+        _scores(dominance=3, care=9, empathy=8, romance=9, playfulness=6, stability=3),
+    ),
+    "childhood_friend": (
+        _scores(dominance=6, care=5, dependence=8, empathy=2, romance=1, playfulness=3, stability=3, maturity=8),
+        _scores(dominance=5, care=6, dependence=5, empathy=5, romance=4, playfulness=5, stability=6, maturity=5),
+    ),
+}
+
+
+class TestRelationMatchCalibration:
+    """Docs/18 §6 校准：种子内容、极端画像 9-10、中性画像 4-6、16 类关系类型全覆盖。"""
+
+    def test_seeded_questions_match_catalog(self, client):
+        test = _current_test()
+        seeds = build_current_test_seed()
+        questions = list(test.questions.order_by("order"))
+        assert len(questions) == len(seeds) == 40
+        for question, seed in zip(questions, seeds):
+            assert question.question_text == seed.question_text
+            assert question.question_type == seed.question_type
+            assert question.scene_tag == seed.scene_tag
+            assert list(question.options.order_by("order").values_list("option_text", flat=True)) == list(seed.option_texts)
+
+    def test_seed_weights_follow_docs18_convention(self):
+        for seed in build_current_test_seed():
+            if seed.question_type == "scale":
+                assert seed.option_texts == ("完全符合", "比较符合", "不太符合", "完全不符合")
+                dimension = next(iter(seed.option_payloads[0]))
+                assert [payload.get(dimension, 0) for payload in seed.option_payloads] == [3, 2, 1, 0]
+                continue
+            for payload in seed.option_payloads:
+                assert len(payload) <= 1
+                assert all(weight == 3 for weight in payload.values())
+
+    @pytest.mark.parametrize("dimension", DIMENSIONS)
+    def test_extreme_answers_score_9_or_10_on_target_dimension(self, client, dimension):
+        test = _current_test()
+        answer_map = {}
+        for question in test.questions.prefetch_related("options").order_by("order"):
+            options = list(question.options.order_by("order"))
+            if question.question_type == "multi_select":
+                selected = [option.id for option in options if option.dimension_payload.get(dimension, 0) > 0]
+                answer_map[question.id] = selected or [options[0].id]
+            else:
+                answer_map[question.id] = [max(options, key=lambda option: option.dimension_payload.get(dimension, 0)).id]
+        scores, _items = score_answers(test, answer_map)
+        assert 9 <= scores[dimension] <= 10
+
+    def test_half_max_raw_scores_fall_in_mid_band(self):
+        raw_scores = {dimension: value // 2 for dimension, value in build_dimension_max_raw_scores().items()}
+        scores = normalize_dimension_scores(raw_scores)
+        assert all(4 <= score <= 6 for score in scores.values())
+
+    @pytest.mark.parametrize("relation_type", sorted(RELATION_TYPES))
+    def test_all_relation_types_are_reachable(self, relation_type):
+        scores_a, scores_b = _REACHABLE_PAIRS[relation_type]
+        assert select_relation_type(_profile_of(scores_a), _profile_of(scores_b)) == relation_type
 
 
 class TestRelationMatchPublicTest:
