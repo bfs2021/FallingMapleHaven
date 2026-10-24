@@ -1,75 +1,179 @@
-from django.contrib.auth import get_user_model
-from django.db.models import Q
 from rest_framework import serializers
 
-from apps.friends.models import Friendship
-from .models import QuizQuestion, QuizAnswer, QuizResult
-
-User = get_user_model()
-
-
-class QuizQuestionCreateSerializer(serializers.Serializer):
-    target_user_id = serializers.IntegerField()
-    question = serializers.CharField()
-    correct_answer = serializers.CharField(max_length=500)
-
-    def validate_target_user_id(self, value):
-        request = self.context.get("request")
-        if not request:
-            return value
-
-        if value == request.user.id:
-            raise serializers.ValidationError("不能给自己出题")
-
-        if not User.objects.filter(id=value).exists():
-            raise serializers.ValidationError("目标用户不存在")
-
-        is_friend = Friendship.objects.filter(
-            Q(from_user=request.user, to_user_id=value) | Q(from_user_id=value, to_user=request.user),
-            status=Friendship.Status.ACCEPTED,
-        ).exists()
-        if not is_friend:
-            raise serializers.ValidationError("只能向好友出题")
-
-        return value
+from .models import (
+    QuizQuestionBank,
+    QuizQuestionBankOption,
+    QuizSubmission,
+    QuizTest,
+    QuizTestOption,
+    QuizTestQuestion,
+)
 
 
-class QuizQuestionSerializer(serializers.ModelSerializer):
-    has_answered = serializers.SerializerMethodField()
-    from_user = serializers.SerializerMethodField()
+def user_brief(user):
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        "nickname": user.nickname,
+        "avatar_url": user.avatar.url if getattr(user, "avatar", None) else None,
+    }
+
+
+class QuizOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizTestOption
+        fields = ["id", "option_text", "order"]
+
+
+class QuizQuestionPublicSerializer(serializers.ModelSerializer):
+    options = QuizOptionSerializer(many=True, read_only=True)
 
     class Meta:
-        model = QuizQuestion
-        fields = ["id", "from_user", "target_user", "question", "created_at", "has_answered"]
-        read_only_fields = ["id", "from_user", "target_user", "created_at"]
-
-    def get_has_answered(self, obj):
-        return hasattr(obj, "answer") and obj.answer is not None
-
-    def get_from_user(self, obj):
-        return {
-            "user_id": obj.creator.id,
-            "nickname": obj.creator.nickname,
-            "avatar_url": obj.creator.avatar.url if obj.creator.avatar else None,
-        }
+        model = QuizTestQuestion
+        fields = ["id", "question_type", "question_text", "order", "options"]
 
 
-class QuizAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuizAnswer
-        fields = ["id", "question", "answer", "is_correct", "created_at"]
-        read_only_fields = ["id", "question", "is_correct", "created_at"]
-
-
-class QuizResultSerializer(serializers.ModelSerializer):
-    friend_id = serializers.SerializerMethodField()
+class QuizQuestionOwnerSerializer(serializers.ModelSerializer):
+    options = QuizOptionSerializer(many=True, read_only=True)
+    correct_option_id = serializers.IntegerField(read_only=True)
+    source_bank_question_id = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = QuizResult
-        fields = ["friend_id", "total_questions", "correct_count", "match_score", "updated_at"]
+        model = QuizTestQuestion
+        fields = [
+            "id",
+            "question_type",
+            "question_text",
+            "order",
+            "correct_option_id",
+            "source_bank_question_id",
+            "options",
+        ]
 
-    def get_friend_id(self, obj):
-        user_id = self.context.get("user_id")
-        if user_id == obj.user_a_id:
-            return obj.user_b_id
-        return obj.user_a_id
+
+class QuizTestCardSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+    question_count = serializers.SerializerMethodField()
+    submission_count = serializers.SerializerMethodField()
+    has_submitted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuizTest
+        fields = [
+            "id",
+            "owner",
+            "title",
+            "status",
+            "question_count",
+            "submission_count",
+            "has_submitted",
+            "created_at",
+            "published_at",
+        ]
+
+    def get_owner(self, obj):
+        return user_brief(obj.owner)
+
+    def get_question_count(self, obj):
+        return obj.questions.count()
+
+    def get_submission_count(self, obj):
+        return obj.submissions.filter(is_deleted=False).count()
+
+    def get_has_submitted(self, obj):
+        submitted_ids = self.context.get("submitted_test_ids") or set()
+        return obj.id in submitted_ids
+
+
+class QuizTestDetailPublicSerializer(QuizTestCardSerializer):
+    questions = QuizQuestionPublicSerializer(many=True, read_only=True)
+    my_submission_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuizTest
+        fields = [
+            "id",
+            "owner",
+            "title",
+            "status",
+            "question_count",
+            "has_submitted",
+            "my_submission_id",
+            "questions",
+        ]
+
+    def get_my_submission_id(self, obj):
+        submission_map = self.context.get("submission_map") or {}
+        return submission_map.get(obj.id)
+
+
+class QuizTestDetailOwnerSerializer(serializers.ModelSerializer):
+    question_count = serializers.SerializerMethodField()
+    submission_count = serializers.SerializerMethodField()
+    questions = QuizQuestionOwnerSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = QuizTest
+        fields = [
+            "id",
+            "title",
+            "status",
+            "question_count",
+            "submission_count",
+            "created_at",
+            "updated_at",
+            "published_at",
+            "questions",
+        ]
+
+    def get_question_count(self, obj):
+        return obj.questions.count()
+
+    def get_submission_count(self, obj):
+        return obj.submissions.filter(is_deleted=False).count()
+
+
+class QuizSubmissionSummarySerializer(serializers.ModelSerializer):
+    rank = serializers.IntegerField(read_only=True, default=None)
+    is_tied = serializers.BooleanField(read_only=True, default=False)
+    user = serializers.SerializerMethodField()
+    total_count = serializers.IntegerField(read_only=True, default=10)
+    score_percent = serializers.SerializerMethodField()
+    is_current = serializers.BooleanField(read_only=True, default=False)
+
+    class Meta:
+        model = QuizSubmission
+        fields = [
+            "id",
+            "rank",
+            "is_tied",
+            "participant_type",
+            "participant_name",
+            "user",
+            "correct_count",
+            "total_count",
+            "score_percent",
+            "title",
+            "is_current",
+            "created_at",
+        ]
+
+    def get_user(self, obj):
+        return user_brief(obj.user) if obj.user_id else None
+
+    def get_score_percent(self, obj):
+        return float(obj.score_percent)
+
+
+class QuizBankOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizQuestionBankOption
+        fields = ["id", "option_text", "order"]
+
+
+class QuizBankQuestionSerializer(serializers.ModelSerializer):
+    options = QuizBankOptionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = QuizQuestionBank
+        fields = ["id", "question_text", "tags", "options", "created_at", "updated_at"]

@@ -28,11 +28,8 @@ RELATED_MODELS = [
     ("VisitRecord (as visitor)", "profiles.VisitRecord", "visitor__in"),
     ("VisitRecord (as visited)", "profiles.VisitRecord", "visited_user__in"),
     ("GuestbookEntry", "profiles.GuestbookEntry", "author__in"),
-    ("QuizQuestion (created)", "plugins.QuizQuestion", "creator__in"),
-    ("QuizQuestion (received)", "plugins.QuizQuestion", "target_user__in"),
-    ("QuizAnswer", "plugins.QuizAnswer", "answerer__in"),
-    ("QuizResult (as A)", "plugins.QuizResult", "user_a__in"),
-    ("QuizResult (as B)", "plugins.QuizResult", "user_b__in"),
+    ("QuizTest", "plugins.QuizTest", "owner__in"),
+    ("QuizSubmission", "plugins.QuizSubmission", "user__in"),
     ("AnonymousQuestion (sent)", "plugins.AnonymousQuestion", "sender__in"),
     ("AnonymousQuestion (received)", "plugins.AnonymousQuestion", "recipient__in"),
 ]

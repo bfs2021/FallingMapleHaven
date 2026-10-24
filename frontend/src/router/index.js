@@ -27,15 +27,45 @@ const routes = [
   },
   {
     path: '/profile/:userId/plugins/quiz',
-    name: 'Quiz',
+    name: 'QuizPage',
     component: () => import('@/views/QuizPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/quiz/tests/:testId',
+    name: 'QuizTestDetail',
+    component: () => import('@/views/QuizPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/quiz/tests/:testId/edit',
+    name: 'QuizTestEditor',
+    component: () => import('@/views/QuizTestEditorPage.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/profile/:userId/plugins/quiz/tests/:testId/leaderboard',
+    name: 'QuizTestLeaderboard',
+    component: () => import('@/views/QuizPage.vue'),
   },
   {
     path: '/profile/:userId/plugins/question-box',
     name: 'QuestionBox',
     component: () => import('@/views/QuestionBoxPage.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/profile/:userId/plugins/relation-match',
+    name: 'RelationMatchPage',
+    component: () => import('@/views/RelationMatchPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/relation-match/tests/current',
+    name: 'RelationMatchTestPage',
+    component: () => import('@/views/RelationMatchTestPage.vue'),
+  },
+  {
+    path: '/profile/:userId/plugins/relation-match/pairs/:pairId',
+    name: 'RelationMatchPairResultPage',
+    component: () => import('@/views/RelationMatchPairResultPage.vue'),
   },
   {
     path: '/profile/:userId/guestbook',
@@ -94,6 +124,26 @@ const routes = [
     name: 'Notifications',
     component: () => import('@/views/NotificationsPage.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/plugins/relation-match/my',
+    name: 'RelationMatchMyPage',
+    component: () => import('@/views/RelationMatchMyPage.vue'),
+  },
+  {
+    path: '/plugins/relation-match/join',
+    name: 'RelationMatchJoinPage',
+    component: () => import('@/views/RelationMatchJoinPage.vue'),
+  },
+  {
+    path: '/plugins/relation-match/pairs/:pairId',
+    name: 'RelationMatchPairResultStandalone',
+    component: () => import('@/views/RelationMatchPairResultPage.vue'),
+  },
+  {
+    path: '/plugins/relation-match/tests/current',
+    name: 'RelationMatchTestStandalone',
+    component: () => import('@/views/RelationMatchTestPage.vue'),
   },
   ...adminRoutes,
   {

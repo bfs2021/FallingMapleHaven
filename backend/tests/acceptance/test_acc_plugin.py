@@ -1,6 +1,8 @@
 import pytest
 from rest_framework import status
 
+from apps.plugins.models import Plugin
+
 QUIZ = "/api/v1/plugins/quiz/"
 QUESTION_BOX = "/api/v1/plugins/question-box/"
 SUMMARY = "/api/v1/plugins/summary/"
@@ -12,124 +14,156 @@ def _unwrap(resp):
     return resp.data.get("data", resp.data)
 
 
-class TestQuizCreateQuestion:
-    """POST /plugins/quiz/questions/ — PRD §2.7"""
+@pytest.fixture(autouse=True)
+def _active_plugins():
+    Plugin.objects.update_or_create(plugin_type="quiz", defaults={"name": "默契问答", "is_active": True})
+    Plugin.objects.update_or_create(plugin_type="question_box", defaults={"name": "匿名提问箱", "is_active": True})
 
-    def test_create_question(self, alice_client, bob, friendship):
-        resp = alice_client.post(QUIZ + "questions/", {
-            "target_user_id": bob.id,
-            "question": "What is my favorite color?",
-            "correct_answer": "Blue",
-        })
+
+def _quiz_question(index, correct_order=1):
+    return {
+        "question_text": f"Question {index}?",
+        "order": index,
+        "correct_option_order": correct_order,
+        "options": [
+            {"option_text": f"A{index}", "order": 1},
+            {"option_text": f"B{index}", "order": 2},
+        ],
+    }
+
+
+def _quiz_payload(title="Acceptance quiz", count=10):
+    return {
+        "title": title,
+        "questions": [_quiz_question(index) for index in range(1, count + 1)],
+    }
+
+
+def _create_published_test(client):
+    resp = client.post(QUIZ + "my/tests/", _quiz_payload(), format="json")
+    assert resp.status_code == status.HTTP_201_CREATED
+    test_id = _unwrap(resp)["id"]
+    resp = client.post(QUIZ + f"my/tests/{test_id}/publish/", format="json")
+    assert resp.status_code == status.HTTP_200_OK
+    return _unwrap(resp)
+
+
+def _answer_payload(test, correct=True):
+    answers = []
+    for question in test["questions"]:
+        selected = question["options"][0 if correct else 1]
+        answers.append({"question_id": question["id"], "selected_option_id": selected["id"]})
+    return {"answers": answers}
+
+
+class TestQuizOwnerTests:
+    """Owner manages /plugins/quiz/my/tests/."""
+
+    def test_create_draft(self, alice_client):
+        resp = alice_client.post(QUIZ + "my/tests/", _quiz_payload(count=2), format="json")
         assert resp.status_code == status.HTTP_201_CREATED
+        data = _unwrap(resp)
+        assert data["status"] == "draft"
+        assert data["question_count"] == 2
 
-    def test_requires_auth(self, client, bob):
-        resp = client.post(QUIZ + "questions/", {
-            "target_user_id": bob.id, "question": "Q?", "correct_answer": "A",
-        })
+    def test_create_requires_auth(self, client):
+        resp = client.post(QUIZ + "my/tests/", _quiz_payload(count=2), format="json")
         assert resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
 
+    def test_publish_requires_ten_questions(self, alice_client):
+        resp = alice_client.post(QUIZ + "my/tests/", _quiz_payload(count=2), format="json")
+        test_id = _unwrap(resp)["id"]
+        resp = alice_client.post(QUIZ + f"my/tests/{test_id}/publish/", format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == 40001
 
-class TestQuizReceivedQuestions:
-    """GET /plugins/quiz/questions/received/ — PRD §2.7"""
+    def test_publish_success(self, alice_client):
+        data = _create_published_test(alice_client)
+        assert data["status"] == "published"
+        assert data["question_count"] == 10
 
-    def test_get_received_questions(self, alice_client, bob_client, bob, friendship):
-        alice_client.post(QUIZ + "questions/", {
-            "target_user_id": bob.id, "question": "What is my favorite color?", "correct_answer": "Blue",
-        })
-        resp = bob_client.get(QUIZ + "questions/received/")
+
+class TestQuizPublicFlow:
+    """Public homepage quiz flow."""
+
+    def test_public_list_and_detail_allow_anonymous(self, client, alice_client, alice):
+        test = _create_published_test(alice_client)
+
+        resp = client.get(QUIZ + f"users/{alice.id}/tests/")
         assert resp.status_code == status.HTTP_200_OK
-        data = _unwrap(resp)
-        results = data.get("results", data if isinstance(data, list) else [])
-        assert any(q["question"] == "What is my favorite color?" for q in results)
+        assert _unwrap(resp)["results"][0]["id"] == test["id"]
 
-    def test_requires_auth(self, client):
-        resp = client.get(QUIZ + "questions/received/")
-        assert resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-
-class TestQuizAnswerQuestion:
-    """POST /plugins/quiz/questions/{id}/answer/ — PRD §2.7"""
-
-    def _create_question(self, client, target, q="Favorite pet?", a="Dog"):
-        resp = client.post(QUIZ + "questions/", {
-            "target_user_id": target.id, "question": q, "correct_answer": a,
-        })
-        return _unwrap(resp).get("id") or resp.data.get("data", {}).get("id")
-
-    def test_answer_correctly(self, alice_client, bob_client, bob, friendship):
-        q_id = self._create_question(alice_client, bob)
-        assert q_id is not None
-        resp = bob_client.post(QUIZ + f"questions/{q_id}/answer/", {"answer": "Dog"})
-        assert resp.status_code == status.HTTP_201_CREATED
-        data = _unwrap(resp)
-        assert data.get("is_correct") is True
-
-    def test_answer_incorrectly(self, alice_client, bob_client, bob, friendship):
-        q_id = self._create_question(alice_client, bob)
-        assert q_id is not None
-        resp = bob_client.post(QUIZ + f"questions/{q_id}/answer/", {"answer": "Cat"})
-        assert resp.status_code == status.HTTP_201_CREATED
-        data = _unwrap(resp)
-        assert data.get("is_correct") is False
-        assert data.get("correct_answer") == "Dog"
-
-    def test_requires_auth(self, alice_client, bob_client, bob, friendship, client):
-        q_id = self._create_question(alice_client, bob)
-        resp = client.post(QUIZ + f"questions/{q_id}/answer/", {"answer": "A"})
-        assert resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-
-class TestQuizResult:
-    """GET /plugins/quiz/result/{friend_id}/ — PRD §2.7"""
-
-    def _create_question(self, client, target, q, a):
-        client.post(QUIZ + "questions/", {
-            "target_user_id": target.id, "question": q, "correct_answer": a,
-        })
-
-    def test_view_result(self, alice_client, bob_client, alice, bob, friendship):
-        self._create_question(alice_client, bob, "Q1?", "A")
-        self._create_question(alice_client, bob, "Q2?", "B")
-        qs = _unwrap(bob_client.get(QUIZ + "questions/received/"))
-        for q in qs.get("results", qs if isinstance(qs, list) else []):
-            bob_client.post(QUIZ + f"questions/{q['id']}/answer/", {"answer": "A"})
-        resp = bob_client.get(QUIZ + f"result/{alice.id}/")
+        resp = client.get(QUIZ + f"tests/{test['id']}/")
         assert resp.status_code == status.HTTP_200_OK
-        data = _unwrap(resp)
-        assert "match_score" in data
-        assert "total_questions" in data
-        assert "correct_count" in data
+        question = _unwrap(resp)["questions"][0]
+        assert "correct_option_id" not in question
+        assert resp.cookies.get("fmh_visitor_id") is not None
 
-    def test_requires_auth(self, client, alice):
-        resp = client.get(QUIZ + f"result/{alice.id}/")
-        assert resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+    def test_logged_in_submit_redirects_to_leaderboard(self, alice_client, bob_client):
+        test = _create_published_test(alice_client)
+        detail = _unwrap(bob_client.get(QUIZ + f"tests/{test['id']}/"))
+
+        resp = bob_client.post(QUIZ + f"tests/{test['id']}/submissions/", _answer_payload(detail), format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        data = _unwrap(resp)
+        assert data["submission"]["correct_count"] == 10
+        assert "leaderboard" in data["leaderboard_url"]
+
+    def test_visitor_submit_sets_cookie(self, client, alice_client):
+        test = _create_published_test(alice_client)
+        detail_resp = client.get(QUIZ + f"tests/{test['id']}/")
+        detail = _unwrap(detail_resp)
+        payload = _answer_payload(detail, correct=False)
+        payload["participant_name"] = "Visitor"
+
+        resp = client.post(QUIZ + f"tests/{test['id']}/submissions/", payload, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.cookies.get("fmh_visitor_id") is not None or detail_resp.cookies.get("fmh_visitor_id") is not None
+
+    def test_duplicate_submit_rejected(self, alice_client, bob_client):
+        test = _create_published_test(alice_client)
+        detail = _unwrap(bob_client.get(QUIZ + f"tests/{test['id']}/"))
+        payload = _answer_payload(detail)
+        bob_client.post(QUIZ + f"tests/{test['id']}/submissions/", payload, format="json")
+
+        resp = bob_client.post(QUIZ + f"tests/{test['id']}/submissions/", payload, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == 40005
+
+    def test_owner_cannot_submit_own_test(self, alice_client):
+        test = _create_published_test(alice_client)
+        detail = _unwrap(alice_client.get(QUIZ + f"tests/{test['id']}/"))
+
+        resp = alice_client.post(QUIZ + f"tests/{test['id']}/submissions/", _answer_payload(detail), format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == 40005
 
 
 class TestQuizLeaderboard:
-    """GET /plugins/quiz/leaderboard/ — PRD §2.7"""
+    """GET /plugins/quiz/tests/{id}/leaderboard/."""
 
-    def test_leaderboard_success(self, alice_client, bob_client, alice, bob, friendship):
-        alice_client.post(QUIZ + "questions/", {
-            "target_user_id": bob.id, "question": "Q?", "correct_answer": "A",
-        })
-        qs = _unwrap(bob_client.get(QUIZ + "questions/received/"))
-        for q in qs.get("results", qs if isinstance(qs, list) else []):
-            bob_client.post(QUIZ + f"questions/{q['id']}/answer/", {"answer": "A"})
-        resp = bob_client.get(QUIZ + "leaderboard/")
+    def test_leaderboard_success(self, alice_client, bob_client):
+        test = _create_published_test(alice_client)
+        detail = _unwrap(bob_client.get(QUIZ + f"tests/{test['id']}/"))
+        submit = bob_client.post(QUIZ + f"tests/{test['id']}/submissions/", _answer_payload(detail), format="json")
+
+        resp = bob_client.get(QUIZ + f"tests/{test['id']}/leaderboard/", {"answerId": _unwrap(submit)["submission"]["id"]})
+
         assert resp.status_code == status.HTTP_200_OK
         data = _unwrap(resp)
-        assert "rankings" in data
-        assert "avg_match_rate" in data
-        assert "total_friends" in data
+        assert data["leaderboard"]["total"] == 1
+        assert data["leaderboard"]["results"][0]["rank"] == 1
+        assert data["leaderboard"]["results"][0]["is_current"] is True
 
-    def test_requires_auth(self, client):
-        resp = client.get(QUIZ + "leaderboard/")
-        assert resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
-
-    def test_leaderboard_empty_for_no_questions(self, alice_client):
-        resp = alice_client.get(QUIZ + "leaderboard/")
+    def test_leaderboard_empty_for_no_submissions(self, client, alice_client):
+        test = _create_published_test(alice_client)
+        resp = client.get(QUIZ + f"tests/{test['id']}/leaderboard/")
         assert resp.status_code == status.HTTP_200_OK
+        assert _unwrap(resp)["leaderboard"]["total"] == 0
 
 
 class TestQuestionBoxAsk:
@@ -252,10 +286,9 @@ class TestPluginSummary:
 
 class TestAuthRequired:
     @pytest.mark.parametrize("method,url,body", [
-        ("post", QUIZ + "questions/", {"target_user_id": 1, "question": "Q", "correct_answer": "A"}),
-        ("get", QUIZ + "questions/received/", None),
-        ("get", QUIZ + "result/1/", None),
-        ("get", QUIZ + "leaderboard/", None),
+        ("post", QUIZ + "my/tests/", _quiz_payload(count=2)),
+        ("get", QUIZ + "my/tests/", None),
+        ("get", QUIZ + "my/submissions/", None),
         ("post", QUESTION_BOX, {"recipient_id": 1, "content": "test"}),
         ("get", QUESTION_BOX + "inbox/", None),
         ("get", SUMMARY, None),

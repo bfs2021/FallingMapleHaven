@@ -35,7 +35,7 @@ class PluginSummaryView(APIView):
             summary = plugin.get_summary(request.user.id)
             summary["is_active"] = plugin.plugin_type in active_types
             summaries.append(summary)
-        return Response({"code": 0, "data": summaries})
+        return Response({"code": 0, "message": "success", "data": summaries})
 
 
 class ProfilePluginCardsView(APIView):
@@ -53,7 +53,7 @@ class ProfilePluginCardsView(APIView):
             except (User.DoesNotExist, ValueError):
                 user = User.objects.get(username=username_or_id)
         except User.DoesNotExist:
-            return Response({"code": 4004, "message": "用户不存在", "data": None}, status=404)
+            return Response({"code": 40004, "message": "用户不存在", "data": None}, status=404)
 
         viewer_id = request.user.id if request.user.is_authenticated else None
         user_id = user.id
@@ -78,4 +78,4 @@ class ProfilePluginCardsView(APIView):
             "data": {"total_messages": total_gb},
             "route": f"/profile/{user_id}/guestbook",
         })
-        return Response({"code": 0, "data": cards})
+        return Response({"code": 0, "message": "success", "data": cards})

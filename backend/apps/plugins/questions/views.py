@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.models import User
 from apps.notifications.models import Notification
 from django.utils.html import strip_tags
 from apps.common.utils import safe_int
@@ -27,6 +28,11 @@ class QuestionCreateView(APIView):
 
         serializer = QuestionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if not User.objects.filter(pk=serializer.validated_data["recipient_id"]).exists():
+            return Response(
+                {"code": 40004, "message": "用户不存在"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         question = AnonymousQuestion.objects.create(
             recipient_id=serializer.validated_data["recipient_id"],
             sender=request.user,
@@ -97,7 +103,7 @@ class AnswerView(APIView):
             question = AnonymousQuestion.objects.get(pk=pk, recipient=request.user)
         except AnonymousQuestion.DoesNotExist:
             return Response(
-                {"code": 1, "message": "问题不存在或无权限"},
+                {"code": 40004, "message": "问题不存在或无权限"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -124,7 +130,7 @@ class QuestionDeleteView(APIView):
             question = AnonymousQuestion.objects.get(pk=pk, recipient=request.user)
         except AnonymousQuestion.DoesNotExist:
             return Response(
-                {"code": 1, "message": "问题不存在或无权限"},
+                {"code": 40004, "message": "问题不存在或无权限"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         question.delete()

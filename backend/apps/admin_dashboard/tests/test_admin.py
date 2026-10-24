@@ -10,7 +10,7 @@ from apps.friends.models import Friendship
 from apps.groups.models import InterestGroup, GroupMember
 from apps.plugins.models import Plugin
 from apps.plugins.questions.models import AnonymousQuestion
-from apps.plugins.quizzes.models import QuizAnswer, QuizQuestion
+from apps.plugins.quizzes.models import QuizQuestionBank, QuizQuestionBankOption, QuizSubmission, QuizSubmissionAnswer, QuizTest, QuizTestOption, QuizTestQuestion
 from apps.profiles.models import VisitRecord
 
 User = get_user_model()
@@ -106,18 +106,40 @@ def question(admin_user, alice):
 
 
 @pytest.fixture
-def quiz_question(admin_user, bob):
-    return QuizQuestion.objects.create(
-        creator=admin_user, target_user=bob, question="Favorite color?",
-        correct_answer="Blue",
+def quiz_test(admin_user):
+    test = QuizTest.objects.create(
+        owner=admin_user,
+        title="Favorite color test",
+        status=QuizTest.Status.PUBLISHED,
+        published_at=timezone.now(),
     )
+    question = QuizTestQuestion.objects.create(test=test, question_text="Favorite color?", order=1)
+    option = QuizTestOption.objects.create(question=question, option_text="Blue", order=1)
+    QuizTestOption.objects.create(question=question, option_text="Red", order=2)
+    question.correct_option = option
+    question.save(update_fields=["correct_option"])
+    return test
 
 
 @pytest.fixture
-def quiz_answer(quiz_question, bob):
-    return QuizAnswer.objects.create(
-        question=quiz_question, answerer=bob, answer="Blue", is_correct=True
+def quiz_submission(quiz_test, bob):
+    question = quiz_test.questions.first()
+    submission = QuizSubmission.objects.create(
+        test=quiz_test,
+        participant_type=QuizSubmission.ParticipantType.USER,
+        user=bob,
+        participant_name=bob.nickname,
+        correct_count=1,
+        score_percent=100,
+        title="灵魂拍档",
     )
+    QuizSubmissionAnswer.objects.create(
+        submission=submission,
+        question=question,
+        selected_option=question.correct_option,
+        is_correct=True,
+    )
+    return submission
 
 
 @pytest.fixture
@@ -143,7 +165,7 @@ class TestPermissionRequired:
         assert_forbidden(client.get(f"{URL}/posts/"))
         assert_forbidden(client.get(f"{URL}/comments/"))
         assert_forbidden(client.get(f"{URL}/anonymous-questions/"))
-        assert_forbidden(client.get(f"{URL}/quiz/questions/"))
+        assert_forbidden(client.get(f"{URL}/quiz/tests/"))
         assert_forbidden(client.get(f"{URL}/plugins/"))
         assert_forbidden(client.get(f"{URL}/plugins/configs/"))
         assert_forbidden(client.get(f"{URL}/settings/"))
@@ -158,7 +180,7 @@ class TestPermissionRequired:
         assert_staff_denied(alice_client.get(f"{URL}/posts/"))
         assert_staff_denied(alice_client.get(f"{URL}/comments/"))
         assert_staff_denied(alice_client.get(f"{URL}/anonymous-questions/"))
-        assert_staff_denied(alice_client.get(f"{URL}/quiz/questions/"))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/tests/"))
         assert_staff_denied(alice_client.get(f"{URL}/plugins/"))
         assert_staff_denied(alice_client.get(f"{URL}/plugins/configs/"))
         assert_staff_denied(alice_client.get(f"{URL}/settings/"))
@@ -177,6 +199,19 @@ class TestPermissionRequired:
 
     def test_regular_user_group_posts(self, alice_client, test_group):
         assert_staff_denied(alice_client.get(f"{URL}/groups/{test_group.pk}/posts/"))
+
+    def test_regular_user_quiz_admin_endpoints(self, alice_client, quiz_test, quiz_submission):
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/tests/{quiz_test.pk}/"))
+        assert_staff_denied(alice_client.delete(f"{URL}/quiz/tests/{quiz_test.pk}/"))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/submissions/"))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/submissions/{quiz_submission.pk}/"))
+        assert_staff_denied(alice_client.delete(f"{URL}/quiz/submissions/{quiz_submission.pk}/"))
+        assert_staff_denied(alice_client.post(
+            f"{URL}/quiz/question-bank/",
+            {"question_text": "test", "options": [{"option_text": "A", "order": 1}, {"option_text": "B", "order": 2}]},
+            format="json",
+        ))
+        assert_staff_denied(alice_client.get(f"{URL}/quiz/stats/"))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -376,27 +411,134 @@ class TestAdminAnonymousQuestionsView:
 # ═══════════════════════════════════════════════════════════════
 
 class TestAdminQuizQuestionsView:
-    def test_list_with_answer(self, staff_client, quiz_question, quiz_answer):
-        data = assert_ok(staff_client.get(f"{URL}/quiz/questions/"))
+    def test_list_with_submission_count(self, staff_client, quiz_test, quiz_submission):
+        data = assert_ok(staff_client.get(f"{URL}/quiz/tests/"))
         assert data["total"] >= 1
         item = data["results"][0]
-        assert item["question"] == "Favorite color?"
-        assert item["has_answer"] is True
-        assert item["is_correct"] is True
+        assert item["title"] == "Favorite color test"
+        assert item["question_count"] == 1
+        assert item["submission_count"] == 1
 
-    def test_question_without_answer(self, staff_client, quiz_question):
-        data = assert_ok(staff_client.get(f"{URL}/quiz/questions/"))
+    def test_test_without_submission(self, staff_client, quiz_test):
+        data = assert_ok(staff_client.get(f"{URL}/quiz/tests/"))
         item = data["results"][0]
-        assert item["has_answer"] is False
-        assert item["is_correct"] is None
+        assert item["submission_count"] == 0
 
-    def test_response_shape(self, staff_client, quiz_question):
-        data = assert_ok(staff_client.get(f"{URL}/quiz/questions/"))
+    def test_response_shape(self, staff_client, quiz_test):
+        data = assert_ok(staff_client.get(f"{URL}/quiz/tests/"))
         item = data["results"][0]
-        for key in ("id", "creator", "target_user", "question", "has_answer", "is_correct", "created_at"):
+        for key in ("id", "owner", "title", "status", "question_count", "submission_count", "created_at", "published_at"):
             assert key in item
-        assert "user_id" in item["creator"]
-        assert "nickname" in item["creator"]
+        assert "user_id" in item["owner"]
+        assert "nickname" in item["owner"]
+
+    def test_detail_shows_standard_answer(self, staff_client, quiz_test):
+        data = assert_ok(staff_client.get(f"{URL}/quiz/tests/{quiz_test.id}/"))
+        question = data["questions"][0]
+        assert question["question_text"] == "Favorite color?"
+        assert question["correct_option_id"] == quiz_test.questions.first().correct_option_id
+
+    def test_delete_test_is_soft_delete(self, staff_client, quiz_test):
+        assert_ok(staff_client.delete(f"{URL}/quiz/tests/{quiz_test.id}/"))
+        quiz_test.refresh_from_db()
+        assert quiz_test.status == QuizTest.Status.DELETED
+        assert quiz_test.deleted_at is not None
+
+    def test_submission_list_and_detail(self, staff_client, quiz_submission):
+        data = assert_ok(staff_client.get(f"{URL}/quiz/submissions/"))
+        assert data["total"] >= 1
+        assert data["results"][0]["test_title"] == "Favorite color test"
+
+        detail = assert_ok(staff_client.get(f"{URL}/quiz/submissions/{quiz_submission.id}/"))
+        answer = detail["answers"][0]
+        assert answer["question_id"] == quiz_submission.answers.first().question_id
+        assert answer["question_text"] == "Favorite color?"
+        assert len(answer["options"]) == 2
+        assert answer["selected_option_id"] == quiz_submission.answers.first().selected_option_id
+        assert answer["correct_option_id"] == quiz_submission.answers.first().question.correct_option_id
+
+    def test_delete_submission_is_soft_delete(self, staff_client, quiz_submission):
+        assert_ok(staff_client.delete(f"{URL}/quiz/submissions/{quiz_submission.id}/"))
+        quiz_submission.refresh_from_db()
+        assert quiz_submission.is_deleted is True
+
+    def test_question_bank_crud_and_delete_keeps_test_snapshot(self, staff_client, quiz_test):
+        payload = {
+            "question_text": "Bank question?",
+            "tags": ["daily"],
+            "options": [
+                {"option_text": "A", "order": 1},
+                {"option_text": "B", "order": 2},
+            ],
+        }
+        created = assert_ok(staff_client.post(f"{URL}/quiz/question-bank/", payload, format="json"))
+        bank_id = created["id"]
+        assert QuizQuestionBank.objects.filter(pk=bank_id).exists()
+
+        updated = assert_ok(staff_client.patch(
+            f"{URL}/quiz/question-bank/{bank_id}/",
+            {**payload, "question_text": "Updated bank question?"},
+            format="json",
+        ))
+        assert updated["question_text"] == "Updated bank question?"
+
+        test_question = quiz_test.questions.first()
+        test_question.source_bank_question_id = bank_id
+        test_question.save(update_fields=["source_bank_question"])
+        assert_ok(staff_client.delete(f"{URL}/quiz/question-bank/{bank_id}/"))
+        test_question.refresh_from_db()
+        assert test_question.question_text == "Favorite color?"
+        assert test_question.source_bank_question_id is None
+
+    def test_question_bank_list_filters_by_tag(self, staff_client):
+        daily = QuizQuestionBank.objects.create(question_text="Daily bank question?", tags=["daily"])
+        QuizQuestionBankOption.objects.bulk_create([
+            QuizQuestionBankOption(bank_question=daily, option_text="A", order=1),
+            QuizQuestionBankOption(bank_question=daily, option_text="B", order=2),
+        ])
+        social = QuizQuestionBank.objects.create(question_text="Social bank question?", tags=["social"])
+        QuizQuestionBankOption.objects.bulk_create([
+            QuizQuestionBankOption(bank_question=social, option_text="A", order=1),
+            QuizQuestionBankOption(bank_question=social, option_text="B", order=2),
+        ])
+
+        data = assert_ok(staff_client.get(f"{URL}/quiz/question-bank/", {"tag": "daily"}))
+
+        assert [item["id"] for item in data["results"]] == [daily.id]
+
+    def test_stats(self, staff_client, admin_user, quiz_test, quiz_submission):
+        QuizTest.objects.create(owner=admin_user, title="Draft stats test", status=QuizTest.Status.DRAFT)
+        QuizTest.objects.create(owner=admin_user, title="Deleted stats test", status=QuizTest.Status.DELETED)
+        QuizSubmission.objects.create(
+            test=quiz_test,
+            participant_type=QuizSubmission.ParticipantType.VISITOR,
+            participant_name="访客",
+            correct_count=0,
+            score_percent=0,
+            title="神秘距离感",
+        )
+        QuizSubmission.objects.create(
+            test=quiz_test,
+            participant_type=QuizSubmission.ParticipantType.USER,
+            user=admin_user,
+            participant_name=admin_user.nickname,
+            correct_count=0,
+            score_percent=0,
+            title="神秘距离感",
+            is_deleted=True,
+        )
+
+        data = assert_ok(staff_client.get(f"{URL}/quiz/stats/"))
+        assert data == {
+            "total_tests": 3,
+            "published_tests": 1,
+            "draft_tests": 1,
+            "deleted_tests": 1,
+            "total_submissions": 2,
+            "user_submissions": 1,
+            "visitor_submissions": 1,
+            "question_bank_count": 0,
+        }
 
 
 # ═══════════════════════════════════════════════════════════════

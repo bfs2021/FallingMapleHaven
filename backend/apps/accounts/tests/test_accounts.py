@@ -125,24 +125,10 @@ class TestRegisterView:
 
 
 # ── LoginView ─────────────────────────────────────────────────
+# 匿名限流由根 conftest 的 _no_anon_throttle 全局关闭
 
 @pytest.mark.django_db
 class TestLoginView:
-    @pytest.fixture(autouse=True)
-    def _no_throttle(self, settings):
-        from django.core.cache import cache
-        cache.clear()
-        # Remove AnonRateThrottle from the global defaults so it's not applied
-        # even if the view has throttle_classes = [AnonRateThrottle]
-        current = dict(settings.REST_FRAMEWORK)
-        rates = dict(current.get("DEFAULT_THROTTLE_RATES", {}))
-        rates["anon"] = None  # Disable anon throttling
-        current["DEFAULT_THROTTLE_RATES"] = rates
-        settings.REST_FRAMEWORK = current
-        from rest_framework.settings import api_settings
-        api_settings._cached_attrs.discard("DEFAULT_THROTTLE_RATES")
-        api_settings.__dict__.pop("DEFAULT_THROTTLE_RATES", None)
-        api_settings.__dict__.pop("_user_settings", None)
     def test_success_with_correct_credentials(self, client, alice):
         resp = client.post(BASE + "login/", {
             "username": "alice",

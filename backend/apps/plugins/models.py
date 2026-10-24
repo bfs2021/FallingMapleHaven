@@ -13,3 +13,8 @@ class Plugin(models.Model):
 
     def __str__(self):
         return self.name
+
+
+import apps.plugins.quizzes.models  # noqa: F401,E402
+import apps.plugins.questions.models  # noqa: F401,E402
+import apps.plugins.relation_match.models  # noqa: F401,E402

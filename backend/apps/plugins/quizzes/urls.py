@@ -1,18 +1,25 @@
 from django.urls import path
+
 from apps.plugins.quizzes.views import (
-    QuizQuestionCreateView,
-    QuizReceivedQuestionsView,
-    QuizAnswerView,
-    QuizQuestionDeleteView,
-    QuizResultView,
-    QuizLeaderboardView,
+    MyQuizSubmissionsView,
+    MyQuizTestDetailView,
+    MyQuizTestsView,
+    PublicQuizTestDetailView,
+    PublicQuizTestsView,
+    PublishQuizTestView,
+    QuizQuestionBankView,
+    QuizTestLeaderboardView,
+    SubmitQuizTestView,
 )
 
 urlpatterns = [
-    path("questions/", QuizQuestionCreateView.as_view(), name="quiz-create"),
-    path("questions/received/", QuizReceivedQuestionsView.as_view(), name="quiz-received"),
-    path("questions/<int:pk>/answer/", QuizAnswerView.as_view(), name="quiz-answer"),
-    path("questions/<int:pk>/delete/", QuizQuestionDeleteView.as_view(), name="quiz-delete"),
-    path("result/<int:friend_id>/", QuizResultView.as_view(), name="quiz-result"),
-    path("leaderboard/", QuizLeaderboardView.as_view(), name="quiz-leaderboard"),
+    path("users/<int:owner_id>/tests/", PublicQuizTestsView.as_view(), name="quiz-public-tests"),
+    path("my/tests/", MyQuizTestsView.as_view(), name="quiz-my-tests"),
+    path("my/tests/<int:test_id>/", MyQuizTestDetailView.as_view(), name="quiz-my-test-detail"),
+    path("my/tests/<int:test_id>/publish/", PublishQuizTestView.as_view(), name="quiz-publish-test"),
+    path("tests/<int:test_id>/", PublicQuizTestDetailView.as_view(), name="quiz-public-test-detail"),
+    path("tests/<int:test_id>/submissions/", SubmitQuizTestView.as_view(), name="quiz-submit-test"),
+    path("tests/<int:test_id>/leaderboard/", QuizTestLeaderboardView.as_view(), name="quiz-test-leaderboard"),
+    path("my/submissions/", MyQuizSubmissionsView.as_view(), name="quiz-my-submissions"),
+    path("question-bank/", QuizQuestionBankView.as_view(), name="quiz-question-bank"),
 ]

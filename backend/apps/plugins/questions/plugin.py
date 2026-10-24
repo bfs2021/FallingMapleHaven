@@ -33,7 +33,7 @@ class QuestionBoxPlugin(BasePlugin):
                 {
                     "path": "anonymous-questions",
                     "name": "提问箱管理",
-                    "icon": "🕵️",
+                    "icon": "message-question",
                 }
             ]
         }

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { pluginApi } from '@/api/plugin'
 import { adminApi } from '@/api/admin'
+import { findAdminPluginByType } from '@/utils/adminPlugins'
 import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
@@ -15,6 +16,7 @@ const iconMap = {
   'help-circle': 'helpCircle',
   'message-question': 'messageCircleMore',
   'message-square': 'messageSquare',
+  'heart-handshake': 'heartHandshake',
 }
 
 async function fetchPlugins() {
@@ -36,7 +38,7 @@ async function togglePlugin(plugin) {
   if (!authStore.isAdmin) return
   try {
     const res = await adminApi.plugins()
-    const target = res.data?.find(p => p.type === plugin.type)
+    const target = findAdminPluginByType(res, plugin.type)
     if (target) {
       await adminApi.updatePlugin(target.id, { is_active: !plugin.is_active })
       plugin.is_active = !plugin.is_active
@@ -104,10 +106,7 @@ onMounted(fetchPlugins)
           <template v-if="plugin.type === 'quiz'">
             <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
               <span class="text-maple-600 font-medium">
-                匹配度 {{ plugin.data.avg_match_rate || 0 }}%
-              </span>
-              <span v-if="plugin.data.best_friend_name" class="text-text-secondary">
-                最佳: {{ plugin.data.best_friend_name }} ({{ plugin.data.best_match_rate }}%)
+                已发布 {{ plugin.data.published_test_count || 0 }} 套测试
               </span>
             </div>
           </template>
@@ -118,6 +117,16 @@ onMounted(fetchPlugins)
               </span>
               <span class="text-text-secondary">
                 共 {{ plugin.data.total_questions || 0 }} 条
+              </span>
+            </div>
+          </template>
+          <template v-else-if="plugin.type === 'relation_match'">
+            <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
+              <span class="text-maple-600 font-medium">
+                {{ plugin.data.entry_text || '看看你们像什么' }}
+              </span>
+              <span class="text-text-secondary">
+                {{ plugin.data.share_code ? `短码 ${plugin.data.share_code}` : '完成测试后生成短码' }}
               </span>
             </div>
           </template>

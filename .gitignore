@@ -183,3 +183,11 @@ cython_debug/
 *.err
 backend.err
 audit_report.json
+
+.omo
+.opencode
+.agents
+.playwright-mcp
+
+# Node / Frontend
+node_modules/
