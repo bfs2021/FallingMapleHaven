@@ -15,6 +15,34 @@ def _test_media_root(settings):
     tmp = tempfile.mkdtemp()
     settings.MEDIA_ROOT = tmp
 
+
+@pytest.fixture(autouse=True)
+def _no_anon_throttle():
+    """全局关闭匿名限流：所有测试请求都来自 127.0.0.1，共享 10/min 滑窗配额，
+    大量匿名请求会按真实耗时随机吃到 429，造成顺序依赖的偶发失败；没有测试依赖限流行为。
+    注意必须直接改限流类的费率表：SimpleRateThrottle.THROTTLE_RATES 在 DRF 导入时就绑定了
+    settings 里的字典，之后覆盖 REST_FRAMEWORK 或清理 api_settings 缓存都影响不到该引用。"""
+    from rest_framework.throttling import (
+        AnonRateThrottle,
+        ScopedRateThrottle,
+        SimpleRateThrottle,
+        UserRateThrottle,
+    )
+
+    throttle_classes = (SimpleRateThrottle, AnonRateThrottle, UserRateThrottle, ScopedRateThrottle)
+    snapshots = []
+    for throttle_cls in throttle_classes:
+        rates = getattr(throttle_cls, "THROTTLE_RATES", None)
+        if isinstance(rates, dict):
+            snapshots.append((rates, dict(rates)))
+            rates["anon"] = None
+    try:
+        yield
+    finally:
+        for rates, snapshot in snapshots:
+            rates.clear()
+            rates.update(snapshot)
+
 from apps.chat.models import ChatRoom, ChatRoomMember, Message
 from apps.feed.models import Post
 from apps.friends.models import Friendship

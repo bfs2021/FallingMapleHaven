@@ -33,22 +33,7 @@ def _active_relation_match_plugin(db):
     )
 
 
-@pytest.fixture(autouse=True)
-def _no_anon_throttle(settings):
-    """访客流程会产生大量匿名请求，禁用 AnonRateThrottle 避免 429（与 test_accounts.py 保持一致）"""
-    from django.core.cache import cache
-
-    cache.clear()
-    current = dict(settings.REST_FRAMEWORK)
-    rates = dict(current.get("DEFAULT_THROTTLE_RATES", {}))
-    rates["anon"] = None  # Disable anon throttling
-    current["DEFAULT_THROTTLE_RATES"] = rates
-    settings.REST_FRAMEWORK = current
-    from rest_framework.settings import api_settings
-
-    api_settings._cached_attrs.discard("DEFAULT_THROTTLE_RATES")
-    api_settings.__dict__.pop("DEFAULT_THROTTLE_RATES", None)
-    api_settings.__dict__.pop("_user_settings", None)
+# 匿名限流由根 conftest 的 _no_anon_throttle 全局关闭
 
 
 def _url(name, *args):
