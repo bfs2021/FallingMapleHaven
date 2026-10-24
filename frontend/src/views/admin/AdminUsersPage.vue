@@ -56,7 +56,7 @@ onMounted(fetchUsers)
       <p class="text-xs text-text-secondary/60">当有新用户注册时，他们将显示在此处</p>
     </div>
 
-    <div v-else class="card-base overflow-hidden">
+    <div v-else class="card-base overflow-hidden overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="table-header">
           <tr class="bg-maple-50/60 text-text-secondary">

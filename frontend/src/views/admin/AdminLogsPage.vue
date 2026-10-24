@@ -98,7 +98,7 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div v-if="loading" class="card-base overflow-hidden">
+    <div v-if="loading" class="card-base overflow-hidden overflow-x-auto">
       <div class="space-y-0">
         <div v-for="i in 5" :key="i" class="flex items-center gap-4 px-4 py-3" :class="i > 1 ? 'border-t border-border' : ''">
           <div class="skeleton h-4 w-32" />
@@ -114,7 +114,7 @@ onMounted(async () => {
       <p class="text-xs text-text-secondary/60">管理员的操作记录将显示在此处</p>
     </div>
 
-    <div v-else class="card-base overflow-hidden">
+    <div v-else class="card-base overflow-hidden overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="table-header">
           <tr class="bg-maple-50/60 text-text-secondary">

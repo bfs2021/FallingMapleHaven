@@ -434,7 +434,7 @@ function formatDate(value) {
           <button class="btn-ghost px-3 py-1 text-text-secondary" @click="selectedSubmissionDetail = null">收起</button>
         </div>
 
-        <div class="overflow-hidden rounded-lg border border-border">
+        <div class="overflow-hidden overflow-x-auto rounded-lg border border-border">
           <table class="w-full text-sm">
             <thead class="table-header">
               <tr class="bg-maple-50/60 text-text-secondary">

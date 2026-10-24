@@ -16,9 +16,6 @@ export default {
         sans: ['"Noto Sans SC"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
       },
       fontSize: {
-        'page-title': ['24px', { lineHeight: '1.3', fontWeight: '700' }],
-        'card-title': ['18px', { lineHeight: '1.4', fontWeight: '600' }],
-        'body': ['15px', { lineHeight: '1.6' }],
         'aux': ['13px', { lineHeight: '1.5' }],
         'tag': ['12px', { lineHeight: '1.4', fontWeight: '500' }],
       },

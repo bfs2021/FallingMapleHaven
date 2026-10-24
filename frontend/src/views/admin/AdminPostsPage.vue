@@ -64,7 +64,7 @@ onMounted(fetchContent)
       @update:activeKey="activeTab = $event"
     />
 
-    <div v-if="loading" class="card-base overflow-hidden">
+    <div v-if="loading" class="card-base overflow-hidden overflow-x-auto">
       <div class="space-y-0">
         <div v-for="i in 5" :key="i" class="flex items-center gap-4 px-4 py-3" :class="i > 1 ? 'border-t border-border' : ''">
           <div class="skeleton h-4 w-8" />
@@ -88,7 +88,7 @@ onMounted(fetchContent)
       <p class="text-xs text-text-secondary/60">用户评论动态后，他们将显示在此处</p>
     </div>
 
-    <div v-else class="card-base overflow-hidden">
+    <div v-else class="card-base overflow-hidden overflow-x-auto">
       <table v-if="activeTab === 'posts'" class="w-full text-sm">
         <thead class="table-header">
           <tr class="bg-maple-50/60 text-text-secondary">

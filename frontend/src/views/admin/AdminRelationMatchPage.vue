@@ -136,7 +136,7 @@ onMounted(fetchAll)
     </div>
 
     <div v-else>
-      <div v-if="activeTab === 'tests'" class="card-base overflow-hidden">
+      <div v-if="activeTab === 'tests'" class="card-base overflow-hidden overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="table-header bg-maple-50/60 text-text-secondary">
             <tr>
@@ -201,7 +201,7 @@ onMounted(fetchAll)
           </div>
         </div>
 
-        <div v-else class="card-base overflow-hidden">
+        <div v-else class="card-base overflow-hidden overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="table-header bg-maple-50/60 text-text-secondary">
               <tr>
@@ -229,7 +229,7 @@ onMounted(fetchAll)
         </div>
       </div>
 
-      <div v-else-if="activeTab === 'profiles'" class="card-base overflow-hidden">
+      <div v-else-if="activeTab === 'profiles'" class="card-base overflow-hidden overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="table-header bg-maple-50/60 text-text-secondary">
             <tr>
@@ -250,7 +250,7 @@ onMounted(fetchAll)
         </table>
       </div>
 
-      <div v-else-if="activeTab === 'pairs'" class="card-base overflow-hidden">
+      <div v-else-if="activeTab === 'pairs'" class="card-base overflow-hidden overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="table-header bg-maple-50/60 text-text-secondary">
             <tr>
