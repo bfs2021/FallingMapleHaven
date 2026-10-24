@@ -70,7 +70,7 @@ function goToProfile() {
 </script>
 
 <template>
-  <div class="group/card card-base p-5 space-y-3 md:hover:-translate-y-1.5 md:hover:shadow-[0_8px_28px_rgba(0,0,0,0.10)] transition-all duration-200 ease-out border-l-[3px] border-l-transparent hover:border-l-maple-600">
+  <div class="group/card card-base p-5 space-y-3 md:hover:-translate-y-1.5 border-l-[3px] border-l-transparent hover:border-l-maple-600">
     <div class="flex items-center gap-3">
       <div class="transition-transform duration-200 group-hover/card:scale-105">
         <AvatarImage :user="post.user" size="sm" clickable @click="goToProfile" />
@@ -82,7 +82,7 @@ function goToProfile() {
           </span>
           <span v-if="post.visibility === 'friends'" class="text-[10px] px-1.5 py-0.5 bg-maple-100 text-maple-600 rounded">仅好友</span>
           <span v-if="post.visibility === 'private'" class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-text-secondary rounded">私密</span>
-          <span v-if="post.group" class="text-[10px] px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded">来自 {{ post.group.name }}</span>
+          <span v-if="post.group" class="text-[10px] px-1.5 py-0.5 bg-maple-50 text-maple-600 rounded">来自 {{ post.group.name }}</span>
         </div>
         <span class="text-xs text-text-secondary">{{ relativeTime(post.created_at) }}</span>
       </div>

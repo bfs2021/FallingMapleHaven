@@ -83,13 +83,13 @@ async function deleteComment(comment) {
         v-model="newComment"
         type="text"
         placeholder="写评论..."
-        class="flex-1 px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600"
+        class="input-base flex-1"
         @keyup.enter="submitComment"
       />
       <button
         @click="submitComment"
         :disabled="submitting || !newComment.trim()"
-        class="px-4 py-2.5 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer"
+        class="btn-primary px-4"
       >
         发送
       </button>

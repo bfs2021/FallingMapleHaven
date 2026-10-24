@@ -29,7 +29,7 @@ function enterRoom(room) {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold text-text-primary mb-6">消息</h1>
+    <h1 class="page-title">消息</h1>
 
     <div v-if="loading" class="text-center text-text-secondary py-12">加载中...</div>
 
@@ -37,13 +37,13 @@ function enterRoom(room) {
       <p class="mb-3">暂无聊天</p>
       <button
         @click="router.push('/friends')"
-        class="px-4 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors cursor-pointer"
+        class="btn-primary px-4"
       >
         去找好友
       </button>
     </div>
 
-    <div v-else class="bg-white rounded-2xl shadow-sm border border-border divide-y divide-border overflow-hidden">
+    <div v-else class="bg-white rounded-2xl border border-border shadow-card divide-y divide-border overflow-hidden">
       <div
         v-for="room in sortedRooms"
         :key="room.id"

@@ -173,7 +173,7 @@ async function handleLogout() {
   </div>
 
   <div v-else-if="profile" class="max-w-4xl mx-auto px-4 pb-8">
-    <div class="relative w-full rounded-b-2xl overflow-hidden" style="aspect-ratio: 3/1">
+    <div class="relative w-full rounded-b-2xl overflow-hidden aspect-[3/1]">
       <img v-if="profile.cover_url" :src="profile.cover_url" class="w-full h-full object-cover" />
       <div v-else class="w-full h-full bg-gradient-to-r from-maple-600 to-maple-400" />
     </div>
@@ -222,9 +222,10 @@ async function handleLogout() {
     <div v-if="authStore.isAdmin && userId !== authStore.user?.user_id" class="px-4 mt-4">
       <button
         @click="toggleAdminPanel"
-        class="text-sm text-red-600 border border-red-300 px-3 py-2 rounded hover:bg-red-50"
+        class="inline-flex items-center gap-1.5 text-sm text-red-600 border border-red-300 px-3 py-2 rounded hover:bg-red-50 cursor-pointer"
       >
-        {{ showAdminPanel ? '收起管理面板' : '⚙ 管理用户' }}
+        <Icon name="settings" :size="14" />
+        {{ showAdminPanel ? '收起管理面板' : '管理用户' }}
       </button>
 
       <div v-if="showAdminPanel && adminInfo" class="mt-2 p-3 bg-red-50 rounded border border-red-200 text-sm">

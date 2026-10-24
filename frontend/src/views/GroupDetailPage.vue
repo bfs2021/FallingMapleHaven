@@ -10,6 +10,7 @@ import PostCard from '@/components/PostCard.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
 import TabBar from '@/components/TabBar.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import BottomSheet from '@/components/BottomSheet.vue'
 import SelectField from '@/components/SelectField.vue'
 import Icon from '@/components/Icon.vue'
 import { relativeTime } from '@/utils/time'
@@ -291,7 +292,7 @@ async function submitGroupPost() {
   <div v-if="loading" class="max-w-4xl mx-auto px-4 pb-8">
     <div class="skeleton h-48 w-full rounded-b-2xl"></div>
     <div class="px-4 -mt-8 relative z-10">
-      <div class="bg-white rounded-xl border border-border p-5 shadow-sm space-y-3">
+      <div class="card-base p-5 space-y-3">
         <div class="skeleton h-7 w-48"></div>
         <div class="skeleton h-4 w-full"></div>
         <div class="skeleton h-4 w-64"></div>
@@ -313,7 +314,7 @@ async function submitGroupPost() {
     </div>
 
     <div class="px-4 -mt-8 relative z-10">
-      <div class="bg-white rounded-xl border border-border p-5 shadow-sm">
+      <div class="card-base p-5">
         <div class="flex items-start justify-between">
           <div class="min-w-0 flex-1">
             <h1 class="text-xl font-bold text-text-primary">{{ group.name }}</h1>
@@ -340,15 +341,15 @@ async function submitGroupPost() {
           <button
             @click="isMember ? handleLeave() : handleJoin()"
             :disabled="joining"
-            class="flex-1 px-5 py-2.5 text-sm rounded-lg transition-colors active:scale-[0.97] cursor-pointer disabled:opacity-50 disabled:active:scale-100"
-            :class="isMember ? 'border border-maple-600 text-maple-600 hover:bg-maple-50' : 'bg-maple-600 text-white hover:bg-maple-700'"
+            class="flex-1"
+            :class="isMember ? 'btn-secondary px-5' : 'btn-primary px-5'"
           >
             {{ joining ? '处理中...' : isMember ? '退出小组' : group.is_public ? '加入小组' : '申请加入' }}
           </button>
           <button
             v-if="isMember && group.chat_room_id"
             @click="router.push('/chat/' + group.chat_room_id)"
-            class="flex-1 px-5 py-2.5 text-sm rounded-lg border border-maple-600 text-maple-600 hover:bg-maple-50 transition-colors active:scale-[0.97] cursor-pointer inline-flex items-center gap-2 justify-center"
+            class="btn-secondary px-5 flex-1 justify-center"
           >
             <Icon name="messageCircle" :size="16" /> 进入聊天室
           </button>
@@ -375,7 +376,7 @@ async function submitGroupPost() {
           加入小组后即可查看组内动态
         </div>
         <template v-else>
-          <div class="bg-white rounded-2xl shadow-sm border border-border p-4">
+          <div class="card-base p-4">
             <textarea
               v-model="newPostContent"
               rows="3"
@@ -383,14 +384,14 @@ async function submitGroupPost() {
               class="input-base resize-none rounded-xl"
             />
             <div class="flex items-center justify-between mt-2">
-              <div class="flex items-center gap-2 text-xs text-text-secondary">
+              <label class="flex items-center gap-2 text-xs text-text-secondary w-fit cursor-pointer select-none">
                 <ToggleSwitch v-model="syncToProfile" />
-                <span class="cursor-pointer select-none" @click="syncToProfile = !syncToProfile">同步到个人主页</span>
-              </div>
+                <span>同步到个人主页</span>
+              </label>
               <button
                 @click="submitGroupPost"
                 :disabled="submittingPost || !newPostContent.trim()"
-                class="px-5 py-2.5 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors active:scale-[0.97] disabled:active:scale-100 disabled:opacity-50 cursor-pointer"
+                class="btn-primary px-5"
               >
                 {{ submittingPost ? '发布中...' : '发布' }}
               </button>
@@ -437,7 +438,7 @@ async function submitGroupPost() {
             <div class="flex-1 min-w-0">
               <span class="text-sm font-medium text-text-primary">{{ m.nickname }}</span>
             </div>
-            <span class="text-xs px-2 py-0.5 rounded-full" :class="getRole(m) === '组长' ? 'bg-maple-100 text-maple-600' : getRole(m) === '管理员' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-text-secondary'">
+            <span class="text-xs px-2 py-0.5 rounded-full" :class="getRole(m) === '组长' ? 'bg-maple-100 text-maple-600' : getRole(m) === '管理员' ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-text-secondary'">
               {{ getRole(m) }}
             </span>
             <div v-if="m.user_id !== authStore.user?.user_id" class="flex items-center gap-1">
@@ -510,88 +511,78 @@ async function submitGroupPost() {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="showEditModal = false">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl">
-          <h2 class="text-lg font-bold text-text-primary mb-4">编辑小组</h2>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-text-primary mb-1">名称</label>
-              <input
-                v-model="editForm.name"
-                type="text"
-                placeholder="输入小组名称"
-                class="input-base"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-text-primary mb-1">简介</label>
-              <textarea
-                v-model="editForm.description"
-                rows="3"
-                placeholder="小组简介（可选）"
-                class="input-base resize-none"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-text-primary mb-1">封面图（可选）</label>
-              <label class="flex items-center gap-2 px-3 py-2.5 border border-border rounded-lg text-sm text-text-secondary cursor-pointer hover:bg-maple-50 transition-colors">
-                <input type="file" accept="image/*" @change="e => editCoverFile = e.target.files[0] || null" class="hidden" />
-                <span>{{ editCoverFile ? editCoverFile.name : '选择封面图片' }}</span>
-              </label>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-text-primary cursor-pointer select-none" @click="editForm.is_public = !editForm.is_public">公开小组（任何人都可加入）</span>
-              <ToggleSwitch v-model="editForm.is_public" />
-            </div>
-          </div>
-          <p v-if="editError" class="text-red-500 text-sm mt-2">{{ editError }}</p>
-          <div class="flex gap-3 mt-6 justify-end">
-            <button
-              @click="showEditModal = false"
-              class="btn-ghost"
-            >
-              取消
-            </button>
-            <button
-              @click="handleEditGroup"
-              :disabled="editing || !editForm.name.trim()"
-              class="btn-primary px-5"
-            >
-              {{ editing ? '保存中...' : '保存' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div v-if="showTransferModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" @click.self="showTransferModal = false">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
-          <h2 class="text-lg font-bold text-text-primary mb-4">转让组长</h2>
-          <p class="text-sm text-text-secondary mb-4">选择新的组长：</p>
-          <SelectField
-            v-model="transferSelectedId"
-            :options="[{ value: null, label: '请选择成员' }, ...members.filter(m => m.user_id !== group.owner?.user_id).map(m => ({ value: m.user_id, label: m.nickname }))]"
+    <BottomSheet :show="showEditModal" title="编辑小组" @close="showEditModal = false">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1">名称</label>
+          <input
+            v-model="editForm.name"
+            type="text"
+            placeholder="输入小组名称"
+            class="input-base"
           />
-          <div class="flex gap-3 mt-6 justify-end">
-            <button
-              @click="showTransferModal = false"
-              class="btn-ghost"
-            >
-              取消
-            </button>
-            <button
-              @click="handleTransfer"
-              :disabled="transferring || !transferSelectedId"
-              class="btn-primary px-5"
-            >
-              {{ transferring ? '转让中...' : '确认转让' }}
-            </button>
-          </div>
         </div>
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1">简介</label>
+          <textarea
+            v-model="editForm.description"
+            rows="3"
+            placeholder="小组简介（可选）"
+            class="input-base resize-none"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1">封面图（可选）</label>
+          <label class="flex items-center gap-2 px-3 py-2.5 border border-border rounded-lg text-sm text-text-secondary cursor-pointer hover:bg-maple-50 transition-colors">
+            <input type="file" accept="image/*" @change="e => editCoverFile = e.target.files[0] || null" class="hidden" />
+            <span>{{ editCoverFile ? editCoverFile.name : '选择封面图片' }}</span>
+          </label>
+        </div>
+        <label class="flex items-center justify-between w-full cursor-pointer select-none">
+          <span class="text-sm text-text-primary">公开小组（任何人都可加入）</span>
+          <ToggleSwitch v-model="editForm.is_public" />
+        </label>
       </div>
-    </Teleport>
+      <p v-if="editError" class="text-red-500 text-sm mt-2">{{ editError }}</p>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button
+          @click="showEditModal = false"
+          class="btn-ghost"
+        >
+          取消
+        </button>
+        <button
+          @click="handleEditGroup"
+          :disabled="editing || !editForm.name.trim()"
+          class="btn-primary px-5"
+        >
+          {{ editing ? '保存中...' : '保存' }}
+        </button>
+      </div>
+    </BottomSheet>
+
+    <BottomSheet :show="showTransferModal" title="转让组长" @close="showTransferModal = false">
+      <p class="text-sm text-text-secondary mb-4">选择新的组长：</p>
+      <SelectField
+        v-model="transferSelectedId"
+        :options="[{ value: null, label: '请选择成员' }, ...members.filter(m => m.user_id !== group.owner?.user_id).map(m => ({ value: m.user_id, label: m.nickname }))]"
+      />
+      <div class="flex gap-3 mt-6 justify-end">
+        <button
+          @click="showTransferModal = false"
+          class="btn-ghost"
+        >
+          取消
+        </button>
+        <button
+          @click="handleTransfer"
+          :disabled="transferring || !transferSelectedId"
+          class="btn-primary px-5"
+        >
+          {{ transferring ? '转让中...' : '确认转让' }}
+        </button>
+      </div>
+    </BottomSheet>
   </div>
 
   <div v-else class="max-w-4xl mx-auto px-4 py-16 text-center text-text-secondary">

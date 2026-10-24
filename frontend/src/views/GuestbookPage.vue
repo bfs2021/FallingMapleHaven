@@ -68,19 +68,19 @@ async function deleteEntry(entryId) {
   <div class="max-w-4xl mx-auto px-4 py-8">
     <h1 class="page-title mb-6">留言板</h1>
 
-    <div v-if="isGuest" class="bg-white rounded-2xl shadow-sm border border-border p-6 mb-6 text-center">
+    <div v-if="isGuest" class="card-base p-6 mb-6 text-center">
       <p class="text-text-secondary mb-4">登录后即可留言</p>
       <RouterLink :to="`/login?next=/profile/${targetUserId}/guestbook`" class="btn-primary inline-block px-6 py-2">
         登录
       </RouterLink>
     </div>
 
-    <div v-else-if="!isOwner" class="bg-white rounded-2xl shadow-sm border border-border p-4 mb-6">
+    <div v-else-if="!isOwner" class="card-base p-4 mb-6">
       <textarea
         v-model="newContent"
         rows="3"
         placeholder="留下你的留言..."
-        class="w-full px-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600 resize-none"
+        class="input-base resize-none"
       />
       <div class="flex justify-end mt-2">
         <button
@@ -103,7 +103,7 @@ async function deleteEntry(entryId) {
       <div
         v-for="entry in entries"
         :key="entry.id"
-        class="bg-white rounded-2xl shadow-sm border border-border p-4"
+        class="card-base p-4"
       >
         <div class="flex items-start gap-3">
           <AvatarImage :user="entry.user" size="sm" />

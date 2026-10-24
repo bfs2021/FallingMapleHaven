@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import MessageBubble from '@/components/MessageBubble.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
+import Icon from '@/components/Icon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,7 +113,7 @@ function goBack() {
         @click="goBack"
         class="w-10 h-10 flex items-center justify-center text-text-secondary hover:text-maple-600 hover:bg-maple-50 rounded-lg transition-colors cursor-pointer"
       >
-        ‹
+        <Icon name="chevronLeft" :size="20" />
       </button>
       <AvatarImage :user="otherUser" size="sm" />
       <template v-if="isGroupRoom">
@@ -153,13 +154,13 @@ function goBack() {
           v-model="messageInput"
           type="text"
           placeholder="输入消息..."
-          class="flex-1 px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600"
+          class="input-base rounded-xl"
           @keyup.enter="sendMessage"
         />
         <button
           @click="sendMessage"
           :disabled="sending || !messageInput.trim()"
-          class="px-5 py-3 bg-maple-600 text-white text-sm rounded-xl hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
+          class="btn-primary px-5 rounded-xl flex-shrink-0"
         >
           发送
         </button>

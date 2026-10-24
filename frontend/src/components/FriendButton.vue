@@ -50,7 +50,7 @@ async function unfriend() {
       v-if="friendStatus === 'none'"
       @click="sendRequest"
       :disabled="loading"
-      class="px-3 py-1 bg-maple-600 text-white text-xs rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer"
+      class="btn-primary px-3 text-xs"
     >
       加好友
     </button>
@@ -64,7 +64,7 @@ async function unfriend() {
       <button
         @click="handleRequest('accept')"
         :disabled="loading"
-        class="px-3 py-1 bg-maple-600 text-white text-xs rounded-lg hover:bg-maple-700 transition-colors disabled:opacity-50 cursor-pointer"
+        class="btn-primary px-3 text-xs"
       >
         同意
       </button>

@@ -30,8 +30,8 @@ function isActive(path, exact = false) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F5F0EB]">
-    <header class="bg-gradient-to-r from-maple-800 to-maple-700 text-white px-4 md:px-6 py-3 flex items-center justify-between shadow-md">
+  <div class="min-h-screen bg-maple-50">
+    <header class="bg-gradient-to-r from-maple-800 to-maple-700 text-white px-4 md:px-6 py-3 flex items-center justify-between shadow-card">
       <div class="flex items-center gap-3">
         <button
           @click="mobileNavOpen = !mobileNavOpen"
@@ -51,7 +51,7 @@ function isActive(path, exact = false) {
     </header>
 
     <div class="flex">
-      <aside class="hidden md:flex flex-col w-56 bg-white border-r border-border min-h-[calc(100vh-52px)] p-3 gap-0.5 shadow-sm">
+      <aside class="hidden md:flex flex-col w-56 bg-white border-r border-border min-h-[calc(100vh-52px)] p-3 gap-0.5 shadow-card">
         <RouterLink
           v-for="item in navItems"
           :key="item.path"
@@ -78,7 +78,7 @@ function isActive(path, exact = false) {
 
       <div v-if="mobileNavOpen" class="md:hidden fixed inset-0 z-40 flex">
         <div @click="mobileNavOpen = false" class="flex-1 bg-black/30 backdrop-blur-sm" />
-        <div class="w-56 bg-white h-full p-4 shadow-lg animate-slide-in-right">
+        <div class="w-56 bg-white h-full p-4 shadow-modal animate-slide-in-right">
           <div class="flex items-center gap-3 mb-4 pb-3 border-b border-border">
             <Icon name="shield" :size="20" class="text-maple-600" />
             <span class="text-sm font-semibold text-text-primary">管理后台</span>

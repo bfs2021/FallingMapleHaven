@@ -43,14 +43,14 @@ async function toggleModule(mod) {
 
 <template>
   <div class="max-w-2xl mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold text-text-primary mb-6">主页模块管理</h1>
+    <h1 class="page-title">主页模块管理</h1>
     <p class="text-sm text-text-secondary mb-6">控制你的个人主页上显示哪些功能模块，修改即时生效。</p>
 
     <div class="space-y-3">
       <div
         v-for="mod in modules"
         :key="mod.key"
-        class="bg-white rounded-2xl border border-border p-5 flex items-center justify-between"
+        class="card-base p-5 flex items-center justify-between"
       >
         <div class="flex items-start gap-3">
           <div class="w-10 h-10 rounded-lg bg-maple-50 flex items-center justify-center flex-shrink-0 mt-0.5">

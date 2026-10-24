@@ -179,7 +179,7 @@ function switchTag(tag) {
             <div class="w-full border-t border-border" />
           </div>
           <div class="relative flex justify-center">
-            <span class="px-4 bg-[#F5F0EB] text-xs text-text-secondary">没有更多动态了</span>
+            <span class="px-4 bg-maple-100 text-xs text-text-secondary">没有更多动态了</span>
           </div>
         </div>
       </div>

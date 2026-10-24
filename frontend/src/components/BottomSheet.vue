@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
+import Icon from '@/components/Icon.vue'
 
 const props = defineProps({
   show: { type: Boolean, required: true },
@@ -26,16 +27,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         />
 
         <div
+          role="dialog"
+          aria-modal="true"
+          :aria-label="title || undefined"
           class="relative w-full bg-white rounded-t-2xl md:rounded-2xl md:max-w-lg max-h-[90dvh] md:max-h-[80vh] overflow-y-auto shadow-modal animate-slide-up md:animate-scale-in"
         >
-          <div class="sticky top-0 bg-white z-10 px-5 pt-3 pb-2 border-b border-border flex items-center justify-between md:hidden">
-            <div class="w-8 h-1 bg-gray-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
-            <h3 v-if="title" class="text-base font-semibold text-text-primary pt-3">{{ title }}</h3>
+          <div class="sticky top-0 bg-white z-10 px-5 pt-3 pb-2 border-b border-border flex items-center justify-between">
+            <div class="w-8 h-1 bg-gray-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2 md:hidden" />
+            <h3 v-if="title" class="text-base font-semibold text-text-primary pt-3 md:pt-0">{{ title }}</h3>
             <button
               @click="emit('close')"
+              aria-label="关闭"
               class="ml-auto w-10 h-10 flex items-center justify-center text-text-secondary hover:text-maple-600 hover:bg-maple-50 rounded-lg transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <Icon name="x" :size="20" />
             </button>
           </div>
 

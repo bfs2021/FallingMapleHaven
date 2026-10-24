@@ -1,5 +1,6 @@
 <script setup>
 import { useToast } from '@/composables/useToast'
+import Icon from '@/components/Icon.vue'
 
 const { toasts, dismiss } = useToast()
 </script>
@@ -10,7 +11,7 @@ const { toasts, dismiss } = useToast()
       <div
         v-for="toast in toasts"
         :key="toast.id"
-        class="pointer-events-auto px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 flex items-center gap-2 max-w-sm animate-slide-in"
+        class="pointer-events-auto px-4 py-2.5 rounded-lg shadow-float text-sm font-medium transition-all duration-300 flex items-center gap-2 max-w-sm animate-slide-in"
         :class="{
           'bg-green-600 text-white': toast.type === 'success',
           'bg-red-600 text-white': toast.type === 'error',
@@ -20,9 +21,10 @@ const { toasts, dismiss } = useToast()
         <span>{{ toast.message }}</span>
         <button
           @click="dismiss(toast.id)"
-          class="ml-auto text-white/70 hover:text-white cursor-pointer text-lg leading-none flex-shrink-0"
+          aria-label="关闭"
+          class="ml-auto text-white/70 hover:text-white cursor-pointer leading-none flex-shrink-0"
         >
-          ×
+          <Icon name="x" :size="14" />
         </button>
       </div>
     </div>

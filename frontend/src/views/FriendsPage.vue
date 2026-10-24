@@ -116,7 +116,7 @@ function goToProfile(user) {
         <p class="mb-3">还没有好友</p>
         <button
           @click="activeTab = 'search'"
-          class="px-4 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors cursor-pointer"
+          class="btn-primary px-4"
         >
           去搜索添加
         </button>
@@ -125,7 +125,7 @@ function goToProfile(user) {
         <div
           v-for="friend in friendStore.friends"
           :key="friend.id"
-          class="bg-white rounded-2xl shadow-sm border border-border p-4 flex items-center gap-4"
+          class="card-base p-4 flex items-center gap-4"
         >
           <AvatarImage :user="friend" size="lg" clickable @click="goToProfile(friend)" />
           <div class="flex-1 min-w-0">
@@ -151,7 +151,7 @@ function goToProfile(user) {
         <div
           v-for="req in friendStore.requests"
           :key="req.id"
-          class="bg-white rounded-2xl shadow-sm border border-border p-4 flex items-center gap-4"
+          class="card-base p-4 flex items-center gap-4"
         >
           <AvatarImage :user="req.from_user" size="lg" clickable @click="goToProfile(req.from_user)" />
           <div class="flex-1 min-w-0">
@@ -162,7 +162,7 @@ function goToProfile(user) {
           <div class="flex gap-2">
             <button
               @click="friendStore.handleRequest(req.id, 'accept').then(() => friendStore.fetchRequests())"
-              class="px-3 py-1 bg-maple-600 text-white text-xs rounded-lg hover:bg-maple-700 transition-colors cursor-pointer"
+              class="btn-primary px-3 text-xs"
             >
               同意
             </button>
@@ -183,7 +183,7 @@ function goToProfile(user) {
           v-model="searchQuery"
           type="text"
           placeholder="搜索用户..."
-          class="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-maple-600/20 focus:border-maple-600"
+          class="input-base"
         />
         <span v-if="searchLoading" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">搜索中...</span>
       </div>
@@ -197,7 +197,7 @@ function goToProfile(user) {
         <div
           v-for="user in searchResults"
           :key="user.user_id || user.id"
-          class="bg-white rounded-2xl shadow-sm border border-border p-4 flex items-center gap-4"
+          class="card-base p-4 flex items-center gap-4"
         >
           <AvatarImage :user="user" size="lg" clickable @click="goToProfile(user)" />
           <div class="flex-1 min-w-0">

@@ -20,7 +20,7 @@ watch(() => dialogState.visible, (v) => {
     <Transition name="confirm">
       <div
         v-if="dialogState.visible"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4"
         @click.self="resolveConfirm(false)"
       >
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" />

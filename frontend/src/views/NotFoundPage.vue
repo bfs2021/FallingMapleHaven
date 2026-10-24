@@ -15,13 +15,13 @@ const authStore = useAuthStore()
       <div class="flex items-center justify-center gap-3">
         <button
           @click="router.push(authStore.isAuthenticated ? '/' : '/login')"
-          class="px-4 py-2 bg-maple-600 text-white text-sm rounded-lg hover:bg-maple-700 transition-colors cursor-pointer"
+          class="btn-primary px-4"
         >
           {{ authStore.isAuthenticated ? '回到首页' : '去登录' }}
         </button>
         <button
           @click="router.back()"
-          class="px-4 py-2 bg-white border border-border text-text-secondary text-sm rounded-lg hover:border-maple-300 hover:text-maple-600 transition-colors cursor-pointer"
+          class="btn-secondary px-4"
         >
           返回上一页
         </button>
