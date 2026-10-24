@@ -169,8 +169,8 @@ async function changePassword() {
           {{ avatarUploading ? '上传中...' : '更换头像' }}
         </button>
       </div>
-      <p v-if="avatarError" class="text-sm text-red-500">{{ avatarError }}</p>
-      <p v-if="coverError" class="text-sm text-red-500">{{ coverError }}</p>
+      <p v-if="avatarError" class="text-sm text-error-500">{{ avatarError }}</p>
+      <p v-if="coverError" class="text-sm text-error-500">{{ coverError }}</p>
     </div>
 
     <!-- 资料编辑 -->
@@ -211,7 +211,7 @@ async function changePassword() {
           {{ profileSaving ? '保存中...' : '保存' }}
         </button>
       </div>
-      <p v-if="profileError" class="text-sm text-red-500">{{ profileError }}</p>
+      <p v-if="profileError" class="text-sm text-error-500">{{ profileError }}</p>
     </div>
 
     <!-- 主页模块 -->
@@ -258,7 +258,7 @@ async function changePassword() {
         <input v-model="confirmNewPassword" :type="showPassword ? 'text' : 'password'" class="input-base" />
       </div>
 
-      <p v-if="passwordError" class="text-red-500 text-sm">{{ passwordError }}</p>
+      <p v-if="passwordError" class="text-error-500 text-sm">{{ passwordError }}</p>
 
       <button
         @click="changePassword"

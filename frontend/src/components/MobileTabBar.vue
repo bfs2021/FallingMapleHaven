@@ -43,7 +43,7 @@ function isActive(path) {
         <span class="text-[10px] leading-none">{{ tab.name }}</span>
         <span
           v-if="tab.name === '通知' && authStore.user?.unread_count"
-          class="absolute -top-0.5 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1"
+          class="absolute -top-0.5 -right-1 bg-error-500 text-white text-[10px] rounded-full min-w-[16px] h-4 flex items-center justify-center px-1"
         >
           {{ authStore.user.unread_count > 99 ? '99+' : authStore.user.unread_count }}
         </span>

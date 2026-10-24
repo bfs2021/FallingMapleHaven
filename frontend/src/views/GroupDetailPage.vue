@@ -11,6 +11,7 @@ import AvatarImage from '@/components/AvatarImage.vue'
 import TabBar from '@/components/TabBar.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import SelectField from '@/components/SelectField.vue'
 import Icon from '@/components/Icon.vue'
 import { relativeTime } from '@/utils/time'
@@ -94,7 +95,9 @@ async function fetchGroup() {
     if (isMember.value) {
       await fetchPosts(true)
     }
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('小组加载失败')
+  } finally {
     loading.value = false
   }
 }
@@ -110,7 +113,9 @@ async function fetchJoinRequests() {
   try {
     const res = await groupApi.joinRequests(groupId.value)
     joinRequestsList.value = res.data || []
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('申请列表加载失败')
+  } finally {
     loadingJoinRequests.value = false
   }
 }
@@ -122,7 +127,9 @@ async function handleRequestAction(request, action) {
     toast.success(action === 'approved' ? '已同意申请' : '已拒绝申请')
     await fetchJoinRequests()
     await fetchGroup()
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error(e.response?.data?.message || '操作失败')
+  } finally {
     handlingRequestId.value = null
   }
 }
@@ -145,7 +152,9 @@ async function fetchPosts(reset = false) {
       hasMorePosts.value = false
     }
     if (!reset) postPage.value += 1
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('动态加载失败')
+  } finally {
     loadingPosts.value = false
   }
 }
@@ -171,7 +180,9 @@ async function handleLeave() {
     await groupApi.leave(groupId.value)
     await fetchGroup()
     toast.success('已退出小组')
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error(e.response?.data?.message || '退出小组失败')
+  } finally {
     joining.value = false
   }
 }
@@ -232,7 +243,9 @@ async function handleManageMember(member, action) {
     }
     toast.success(msgs[action] || '操作成功')
     await fetchGroup()
-  } catch { /* ignore */ }
+  } catch {
+    toast.error(e.response?.data?.message || '操作失败')
+  }
 }
 
 async function handleTransfer() {
@@ -244,7 +257,9 @@ async function handleTransfer() {
     transferSelectedId.value = null
     toast.success('已转让组长')
     await fetchGroup()
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error(e.response?.data?.message || '转让失败')
+  } finally {
     transferring.value = false
   }
 }
@@ -261,7 +276,9 @@ async function handleDeleteGroup() {
     await groupApi.delete(groupId.value)
     toast.success('小组已解散')
     router.push('/groups')
-  } catch { /* ignore */ }
+  } catch {
+    toast.error(e.response?.data?.message || '解散失败')
+  }
 }
 
 function getRole(member) {
@@ -282,7 +299,9 @@ async function submitGroupPost() {
     newPostContent.value = ''
     await fetchPosts(true)
     toast.success('已发布到小组')
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error(e.response?.data?.message || '发布失败，请稍后再试')
+  } finally {
     submittingPost.value = false
   }
 }
@@ -332,7 +351,7 @@ async function submitGroupPost() {
             <button @click="showTransferModal = true" class="px-3 py-2 text-xs font-medium text-maple-600 border border-maple-600 rounded-lg hover:bg-maple-50 transition-colors active:scale-[0.97] cursor-pointer">
               转让组长
             </button>
-            <button @click="handleDeleteGroup" class="px-3 py-2 text-xs font-medium text-red-500 border border-red-400 rounded-lg hover:bg-red-50 transition-colors active:scale-[0.97] cursor-pointer">
+            <button @click="handleDeleteGroup" class="px-3 py-2 text-xs font-medium text-error-500 border border-error-400 rounded-lg hover:bg-error-50 transition-colors active:scale-[0.97] cursor-pointer">
               解散小组
             </button>
           </div>
@@ -398,10 +417,7 @@ async function submitGroupPost() {
             </div>
           </div>
 
-          <div v-if="!posts.length" class="text-center py-12 text-text-secondary">
-            <Icon name="fileText" :size="40" class="mx-auto mb-2 text-maple-300" />
-            <p>暂无动态</p>
-          </div>
+          <EmptyState v-if="!posts.length" icon="fileText" title="暂无动态" />
           <PostCard v-for="post in posts" :key="post.id" :post="post" :showActions="true" @deleted="onPostDeleted" @like-updated="onLikeUpdated" />
           <button
             v-if="hasMorePosts"
@@ -459,7 +475,7 @@ async function submitGroupPost() {
                 </button>
                 <button
                   @click="handleManageMember(m, 'remove')"
-                  class="px-2.5 py-2 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors active:scale-[0.97] cursor-pointer"
+                  class="px-2.5 py-2 text-xs text-error-500 hover:bg-error-50 rounded-md transition-colors active:scale-[0.97] cursor-pointer"
                 >
                   移除成员
                 </button>
@@ -467,25 +483,19 @@ async function submitGroupPost() {
               <template v-else-if="isAdmin && m.role !== 'admin' && m.user_id !== group.owner?.user_id">
                 <button
                   @click="handleManageMember(m, 'remove')"
-                  class="px-2.5 py-2 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors active:scale-[0.97] cursor-pointer"
+                  class="px-2.5 py-2 text-xs text-error-500 hover:bg-error-50 rounded-md transition-colors active:scale-[0.97] cursor-pointer"
                 >
                   移除成员
                 </button>
               </template>
             </div>
           </div>
-          <div v-if="!members.length" class="text-center py-12 text-text-secondary">
-            <Icon name="users" :size="40" class="mx-auto mb-2 text-maple-300" />
-            <p>暂无成员</p>
-          </div>
+          <EmptyState v-if="!members.length" icon="users" title="暂无成员" />
         </div>
 
         <div v-else class="space-y-3">
           <div v-if="loadingJoinRequests" class="text-center text-text-secondary py-8">加载中...</div>
-          <div v-else-if="!joinRequestsList.length" class="text-center py-12 text-text-secondary">
-            <Icon name="mail" :size="40" class="mx-auto mb-2 text-maple-300" />
-            <p>暂无待处理的申请</p>
-          </div>
+          <EmptyState v-else-if="!joinRequestsList.length" icon="mail" title="暂无待处理的申请" />
           <div v-for="req in joinRequestsList" :key="req.id" class="flex items-center gap-3 py-2">
             <AvatarImage :user="req.applicant" size="md" />
             <div class="flex-1 min-w-0">
@@ -495,14 +505,14 @@ async function submitGroupPost() {
             <button
               @click="handleRequestAction(req, 'approved')"
               :disabled="handlingRequestId === req.id"
-              class="px-3 py-2 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors active:scale-[0.97] disabled:active:scale-100 disabled:opacity-50 cursor-pointer"
+              class="px-3 py-2 text-xs font-medium text-white bg-success-600 rounded-lg hover:bg-success-700 transition-colors active:scale-[0.97] disabled:active:scale-100 disabled:opacity-50 cursor-pointer"
             >
               {{ handlingRequestId === req.id ? '处理中...' : '同意' }}
             </button>
             <button
               @click="handleRequestAction(req, 'rejected')"
               :disabled="handlingRequestId === req.id"
-              class="px-3 py-2 text-xs font-medium text-red-600 border border-red-400 rounded-lg hover:bg-red-50 transition-colors active:scale-[0.97] disabled:active:scale-100 disabled:opacity-50 cursor-pointer"
+              class="px-3 py-2 text-xs font-medium text-error-600 border border-error-400 rounded-lg hover:bg-error-50 transition-colors active:scale-[0.97] disabled:active:scale-100 disabled:opacity-50 cursor-pointer"
             >
               {{ handlingRequestId === req.id ? '处理中...' : '拒绝' }}
             </button>
@@ -543,7 +553,7 @@ async function submitGroupPost() {
           <ToggleSwitch v-model="editForm.is_public" />
         </label>
       </div>
-      <p v-if="editError" class="text-red-500 text-sm mt-2">{{ editError }}</p>
+      <p v-if="editError" class="text-error-500 text-sm mt-2">{{ editError }}</p>
       <div class="flex gap-3 mt-6 justify-end">
         <button
           @click="showEditModal = false"
@@ -585,8 +595,7 @@ async function submitGroupPost() {
     </BottomSheet>
   </div>
 
-  <div v-else class="max-w-4xl mx-auto px-4 py-16 text-center text-text-secondary">
-    <Icon name="alertCircle" :size="48" class="mx-auto mb-3 text-maple-300" />
-    <p>小组不存在</p>
+  <div v-else class="max-w-4xl mx-auto">
+    <EmptyState icon="alertCircle" title="小组不存在" description="该小组可能已被解散或设置为私密" />
   </div>
 </template>

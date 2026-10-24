@@ -363,7 +363,7 @@ async function shareCurrentResultUrl() {
               <Icon name="share" :size="16" />
               复制答题链接
             </button>
-            <button class="btn-ghost col-span-2 px-4 py-2 text-red-600" :disabled="actingId === test.id" @click="deleteTest(test)">
+            <button class="btn-ghost col-span-2 px-4 py-2 text-error-600" :disabled="actingId === test.id" @click="deleteTest(test)">
               删除测试
             </button>
           </div>
@@ -532,7 +532,7 @@ async function shareCurrentResultUrl() {
             <div class="flex items-center gap-2">
               <p class="font-medium text-text-primary truncate">{{ item.participant_name }}</p>
               <span v-if="item.is_tied" class="text-xs text-maple-600 bg-maple-100 rounded-full px-2 py-0.5">并列</span>
-              <span v-if="item.is_current" class="text-xs text-green-700 bg-green-50 rounded-full px-2 py-0.5">我的答卷</span>
+              <span v-if="item.is_current" class="text-xs text-success-700 bg-success-50 rounded-full px-2 py-0.5">我的答卷</span>
             </div>
             <p class="text-xs text-text-secondary mt-1">{{ item.title }}</p>
           </div>

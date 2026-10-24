@@ -85,14 +85,14 @@ const unansweredQuestions = computed(() =>
           <div class="flex items-start justify-between">
             <div>
               <p class="text-sm text-text-primary">{{ q.content }}</p>
-              <div v-if="authStore.isAdmin && q.real_sender" class="text-xs text-red-500 mt-1">
+              <div v-if="authStore.isAdmin && q.real_sender" class="text-xs text-error-500 mt-1">
                 真实提问者: {{ q.real_sender.nickname }} (ID: {{ q.real_sender.user_id }})
               </div>
               <span class="text-xs text-text-secondary mt-1 inline-block">未回答</span>
             </div>
             <button
               @click="deleteQuestion(q)"
-              class="text-xs text-red-400 hover:text-red-500 transition-colors cursor-pointer flex-shrink-0 ml-2 py-2 active:scale-[0.97]"
+              class="text-xs text-error-400 hover:text-error-500 transition-colors cursor-pointer flex-shrink-0 ml-2 py-2 active:scale-[0.97]"
             >
               删除
             </button>
@@ -132,7 +132,7 @@ const unansweredQuestions = computed(() =>
         class="card-base p-4 space-y-2"
       >
         <p class="text-sm text-text-primary">Q: {{ q.content }}</p>
-        <div v-if="authStore.isAdmin && q.real_sender" class="text-xs text-red-500">
+        <div v-if="authStore.isAdmin && q.real_sender" class="text-xs text-error-500">
           真实提问者: {{ q.real_sender.nickname }} (ID: {{ q.real_sender.user_id }})
         </div>
         <div class="pl-3 border-l-2 border-maple-400">

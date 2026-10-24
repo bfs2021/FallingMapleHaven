@@ -210,7 +210,7 @@ async function handleLogout() {
             </RouterLink>
             <button
               @click="handleLogout"
-              class="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors active:scale-[0.97]"
+              class="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-error-400 hover:bg-error-50 hover:text-error-500 transition-colors active:scale-[0.97]"
               title="退出登录"
             >
               <Icon name="logOut" :size="18" />
@@ -222,14 +222,14 @@ async function handleLogout() {
     <div v-if="authStore.isAdmin && userId !== authStore.user?.user_id" class="px-4 mt-4">
       <button
         @click="toggleAdminPanel"
-        class="inline-flex items-center gap-1.5 text-sm text-red-600 border border-red-300 px-3 py-2 rounded hover:bg-red-50 cursor-pointer"
+        class="inline-flex items-center gap-1.5 text-sm text-error-600 border border-error-300 px-3 py-2 rounded hover:bg-error-50 cursor-pointer"
       >
         <Icon name="settings" :size="14" />
         {{ showAdminPanel ? '收起管理面板' : '管理用户' }}
       </button>
 
-      <div v-if="showAdminPanel && adminInfo" class="mt-2 p-3 bg-red-50 rounded border border-red-200 text-sm">
-        <h4 class="font-medium text-red-800 mb-2">用户管理</h4>
+      <div v-if="showAdminPanel && adminInfo" class="mt-2 p-3 bg-error-50 rounded border border-error-200 text-sm">
+        <h4 class="font-medium text-error-800 mb-2">用户管理</h4>
         <div class="grid grid-cols-2 gap-2 text-gray-700">
           <div>用户名: {{ adminInfo.username }}</div>
           <div>昵称: {{ adminInfo.nickname }}</div>
@@ -241,7 +241,7 @@ async function handleLogout() {
         <button
           @click="toggleUserBan"
           class="mt-2 px-3 py-2 rounded text-white text-xs"
-          :class="adminInfo.is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'"
+          :class="adminInfo.is_active ? 'bg-error-600 hover:bg-error-700' : 'bg-success-600 hover:bg-success-700'"
         >
           {{ adminInfo.is_active ? '封禁此用户' : '解封此用户' }}
         </button>

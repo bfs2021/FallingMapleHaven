@@ -13,8 +13,8 @@ const { toasts, dismiss } = useToast()
         :key="toast.id"
         class="pointer-events-auto px-4 py-2.5 rounded-lg shadow-float text-sm font-medium transition-all duration-300 flex items-center gap-2 max-w-sm animate-slide-in"
         :class="{
-          'bg-green-600 text-white': toast.type === 'success',
-          'bg-red-600 text-white': toast.type === 'error',
+          'bg-success-600 text-white': toast.type === 'success',
+          'bg-error-600 text-white': toast.type === 'error',
           'bg-gray-800 text-white': toast.type === 'info',
         }"
       >

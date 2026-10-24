@@ -37,7 +37,7 @@ onMounted(fetchPlugins)
 <template>
   <div class="space-y-6 animate-fade-in">
     <h2 class="page-title">插件管理</h2>
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div v-for="i in 6" :key="i" class="card-base p-4 space-y-3">

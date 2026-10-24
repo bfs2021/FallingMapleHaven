@@ -5,6 +5,7 @@ import { postApi } from '@/api/posts'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
 import { relativeTime } from '@/utils/time'
 import PostImageGrid from './PostImageGrid.vue'
 import PostActions from './PostActions.vue'
@@ -13,6 +14,7 @@ import AvatarImage from './AvatarImage.vue'
 import Icon from './Icon.vue'
 
 const { confirm: confirmDelete } = useConfirm()
+const toast = useToast()
 
 const emit = defineEmits(['deleted', 'like-updated'])
 
@@ -45,7 +47,9 @@ async function loadComments() {
     const res = await postApi.comments(props.post.id)
     comments.value = res.data || []
     commentsLoaded.value = true
-  } catch { /* ignore */ }
+  } catch {
+    toast.error('评论加载失败')
+  }
 }
 
 async function deletePost() {
@@ -53,7 +57,9 @@ async function deletePost() {
   try {
     await feedStore.deletePost(props.post.id)
     emit('deleted', props.post.id)
-  } catch { /* ignore */ }
+  } catch {
+    toast.error('删除失败')
+  }
 }
 
 function onCommentDeleted(commentId) {
@@ -89,7 +95,7 @@ function goToProfile() {
       <button
         v-if="authStore.user && (authStore.user.user_id === post.user?.user_id || authStore.user.user_id === post.user?.id || authStore.isAdmin)"
         @click="deletePost"
-        class="px-2 py-1 text-xs text-red-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2 cursor-pointer rounded"
+        class="px-2 py-1 text-xs text-error-400 hover:text-error-500 transition-colors flex-shrink-0 ml-2 cursor-pointer rounded"
       >
         删除
       </button>

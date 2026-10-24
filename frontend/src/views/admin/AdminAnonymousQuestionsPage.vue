@@ -72,10 +72,10 @@ onMounted(async () => {
               <span
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
                 :class="q.is_answered
-                  ? 'bg-green-50 text-green-600'
+                  ? 'bg-success-50 text-success-600'
                   : 'bg-yellow-50 text-yellow-600'"
               >
-                <span class="w-1.5 h-1.5 rounded-full" :class="q.is_answered ? 'bg-green-500' : 'bg-yellow-500'" />
+                <span class="w-1.5 h-1.5 rounded-full" :class="q.is_answered ? 'bg-success-500' : 'bg-yellow-500'" />
                 {{ q.is_answered ? '已回答' : '未回答' }}
               </span>
             </td>

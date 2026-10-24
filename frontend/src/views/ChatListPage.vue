@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
 import { relativeTime } from '@/utils/time'
 import AvatarImage from '@/components/AvatarImage.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const router = useRouter()
 const chatStore = useChatStore()
@@ -33,15 +34,14 @@ function enterRoom(room) {
 
     <div v-if="loading" class="text-center text-text-secondary py-12">加载中...</div>
 
-    <div v-else-if="!sortedRooms.length" class="text-center text-text-secondary py-12">
-      <p class="mb-3">暂无聊天</p>
+    <EmptyState v-else-if="!sortedRooms.length" icon="messageSquare" title="暂无聊天" description="从好友列表发起一段对话吧">
       <button
         @click="router.push('/friends')"
         class="btn-primary px-4"
       >
         去找好友
       </button>
-    </div>
+    </EmptyState>
 
     <div v-else class="bg-white rounded-2xl border border-border shadow-card divide-y divide-border overflow-hidden">
       <div
@@ -54,7 +54,7 @@ function enterRoom(room) {
           <AvatarImage :user="room.other_user" size="xl" />
           <span
             v-if="chatStore.unreadCounts[room.id]"
-            class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-medium"
+            class="absolute -top-1 -right-1 bg-error-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-medium"
           >
             {{ chatStore.unreadCounts[room.id] > 99 ? '99+' : chatStore.unreadCounts[room.id] }}
           </span>

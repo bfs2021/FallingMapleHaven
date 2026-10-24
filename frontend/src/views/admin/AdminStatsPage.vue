@@ -5,7 +5,7 @@ import Icon from '@/components/Icon.vue'
 
 const stats = ref([
   { label: '总用户数', value: '--', icon: 'users', color: 'from-maple-500 to-maple-600' },
-  { label: '日活跃用户', value: '--', icon: 'activity', color: 'from-green-500 to-green-600' },
+  { label: '日活跃用户', value: '--', icon: 'activity', color: 'from-success-500 to-success-600' },
   { label: '动态总数', value: '--', icon: 'fileText', color: 'from-purple-500 to-purple-600' },
   { label: '评论总数', value: '--', icon: 'messageCircle', color: 'from-blue-500 to-blue-600' },
   { label: '消息总数', value: '--', icon: 'send', color: 'from-orange-500 to-orange-600' },
@@ -21,7 +21,7 @@ const chartConfig = {
   '动态发布': { key: 'posts', barClass: 'bg-gradient-to-r from-purple-400 to-purple-600' },
   '消息发送': { key: 'messages', barClass: 'bg-gradient-to-r from-orange-400 to-orange-600' },
   '评论数':   { key: 'comments', barClass: 'bg-gradient-to-r from-blue-400 to-blue-600' },
-  '访问数':   { key: 'visits', barClass: 'bg-gradient-to-r from-green-400 to-green-600' },
+  '访问数':   { key: 'visits', barClass: 'bg-gradient-to-r from-success-400 to-success-600' },
   '好友新增': { key: 'friendships', barClass: 'bg-gradient-to-r from-pink-400 to-pink-600' },
 }
 
@@ -39,7 +39,7 @@ onMounted(async () => {
     const data = res.data || {}
     stats.value = [
       { label: '总用户数', value: data.total_users ?? 0, icon: 'users', color: 'from-maple-500 to-maple-600' },
-      { label: '日活跃用户', value: data.active_users_today ?? 0, icon: 'activity', color: 'from-green-500 to-green-600' },
+      { label: '日活跃用户', value: data.active_users_today ?? 0, icon: 'activity', color: 'from-success-500 to-success-600' },
       { label: '动态总数', value: data.total_posts ?? 0, icon: 'fileText', color: 'from-purple-500 to-purple-600' },
       { label: '评论总数', value: data.total_comments ?? 0, icon: 'messageCircle', color: 'from-blue-500 to-blue-600' },
       { label: '消息总数', value: data.total_messages ?? 0, icon: 'send', color: 'from-orange-500 to-orange-600' },
@@ -69,7 +69,7 @@ function switchTab(days) {
 <template>
   <div class="space-y-6">
     <h2 class="page-title">数据统计</h2>
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div v-for="i in 5" :key="i" class="rounded-xl border border-border p-5 flex items-center gap-4">

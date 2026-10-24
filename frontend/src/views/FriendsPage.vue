@@ -6,6 +6,7 @@ import { friendApi } from '@/api/friends'
 import { chatApi } from '@/api/chat'
 import FriendButton from '@/components/FriendButton.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import Icon from '@/components/Icon.vue'
 import { useToast } from '@/composables/useToast'
 
@@ -112,15 +113,14 @@ function goToProfile(user) {
     <div v-if="friendStore.loading" class="text-center text-text-secondary py-12">加载中...</div>
 
     <template v-if="!friendStore.loading && activeTab === 'list'">
-      <div v-if="!friendStore.friends.length" class="text-center text-text-secondary py-12">
-        <p class="mb-3">还没有好友</p>
+      <EmptyState v-if="!friendStore.friends.length" icon="userPlus" title="还没有好友" description="搜索用户名或昵称，发出第一份好友申请">
         <button
           @click="activeTab = 'search'"
           class="btn-primary px-4"
         >
           去搜索添加
         </button>
-      </div>
+      </EmptyState>
       <div v-else class="space-y-3">
         <div
           v-for="friend in friendStore.friends"
@@ -144,9 +144,7 @@ function goToProfile(user) {
     </template>
 
     <template v-if="!friendStore.loading && activeTab === 'requests'">
-      <div v-if="!friendStore.requests.length" class="text-center text-text-secondary py-12">
-        暂无好友申请
-      </div>
+      <EmptyState v-if="!friendStore.requests.length" icon="mail" title="暂无好友申请" />
       <div v-else class="space-y-3">
         <div
           v-for="req in friendStore.requests"
@@ -187,12 +185,8 @@ function goToProfile(user) {
         />
         <span v-if="searchLoading" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">搜索中...</span>
       </div>
-      <div v-if="!searchQuery.trim()" class="text-center text-text-secondary py-12">
-        输入用户名或昵称搜索
-      </div>
-      <div v-else-if="!searchResults.length && !searchLoading" class="text-center text-text-secondary py-12">
-        未找到相关用户
-      </div>
+      <EmptyState v-if="!searchQuery.trim()" icon="search" title="搜索用户" description="输入用户名或昵称" />
+      <EmptyState v-else-if="!searchResults.length && !searchLoading" icon="search" title="未找到相关用户" description="换个关键词试试" />
       <div v-else class="space-y-3">
         <div
           v-for="user in searchResults"

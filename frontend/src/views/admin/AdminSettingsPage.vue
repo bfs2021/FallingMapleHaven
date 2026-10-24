@@ -50,7 +50,7 @@ async function saveSettings() {
 <template>
   <div class="space-y-6 animate-fade-in">
     <h2 class="page-title">站点设置</h2>
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div v-if="loading" class="card-base p-6 max-w-lg space-y-5">
       <div v-for="i in 4" :key="i" class="space-y-2">
@@ -105,7 +105,7 @@ async function saveSettings() {
           <Icon name="check" :size="15" />
           {{ saving ? '保存中...' : '保存设置' }}
         </button>
-        <span v-if="saved" class="text-sm text-green-600 flex items-center gap-1">
+        <span v-if="saved" class="text-sm text-success-600 flex items-center gap-1">
           <Icon name="check" :size="14" /> 设置已保存
         </span>
       </div>

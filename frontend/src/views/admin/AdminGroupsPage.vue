@@ -94,7 +94,7 @@ onMounted(fetchGroups)
       </div>
     </div>
 
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div v-if="loading" class="card-base overflow-hidden">
       <div class="space-y-0">
@@ -143,9 +143,9 @@ onMounted(fetchGroups)
               <td class="px-4 py-3">
                 <span
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="g.is_public ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'"
+                  :class="g.is_public ? 'bg-success-50 text-success-600' : 'bg-error-50 text-error-500'"
                 >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="g.is_public ? 'bg-green-500' : 'bg-red-400'" />
+                  <span class="w-1.5 h-1.5 rounded-full" :class="g.is_public ? 'bg-success-500' : 'bg-error-400'" />
                   {{ g.is_public ? '公开' : '私密' }}
                 </span>
               </td>
@@ -154,7 +154,7 @@ onMounted(fetchGroups)
                 <button
                   @click.stop="deleteGroup(g)"
                   :disabled="deletingId === g.id"
-                  class="btn-ghost text-xs text-red-500 hover:text-red-600"
+                  class="btn-ghost text-xs text-error-500 hover:text-error-600"
                   aria-label="删除群组"
                 >
                   {{ deletingId === g.id ? '删除中...' : '删除' }}

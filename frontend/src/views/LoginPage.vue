@@ -78,7 +78,7 @@ async function handleLogin() {
             </div>
           </div>
           <Transition name="fade">
-            <p v-if="error" class="text-red-500 text-sm flex items-center gap-1.5">
+            <p v-if="error" class="text-error-500 text-sm flex items-center gap-1.5">
               <Icon name="alertCircle" :size="14" /> {{ error }}
             </p>
           </Transition>

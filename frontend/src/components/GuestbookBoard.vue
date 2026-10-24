@@ -124,7 +124,7 @@ async function deleteEntry(entryId) {
           <button
             v-if="isOwner"
             @click="deleteEntry(entry.id)"
-            class="mt-1 text-xs text-red-400 hover:text-red-500 transition-colors cursor-pointer flex items-center gap-1"
+            class="mt-1 text-xs text-error-400 hover:text-error-500 transition-colors cursor-pointer flex items-center gap-1"
           >
             <Icon name="trash" :size="12" /> 删除
           </button>

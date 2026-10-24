@@ -349,7 +349,7 @@ function formatDate(value) {
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2 whitespace-nowrap">
                   <button class="btn-ghost px-3 py-1 text-maple-600" :disabled="actingId === `test-detail-${test.id}`" @click="viewTestDetail(test)">查看</button>
-                  <button class="btn-ghost px-3 py-1 text-red-600" :disabled="actingId === `test-${test.id}` || test.status === 'deleted'" @click="deleteTest(test)">删除</button>
+                  <button class="btn-ghost px-3 py-1 text-error-600" :disabled="actingId === `test-${test.id}` || test.status === 'deleted'" @click="deleteTest(test)">删除</button>
                 </div>
               </td>
             </tr>
@@ -414,7 +414,7 @@ function formatDate(value) {
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2 whitespace-nowrap">
                   <button class="btn-ghost px-3 py-1 text-maple-600" :disabled="actingId === `submission-detail-${item.id}`" @click="viewSubmissionDetail(item)">查看</button>
-                  <button class="btn-ghost px-3 py-1 text-red-600" :disabled="actingId === `submission-${item.id}` || item.is_deleted" @click="deleteSubmission(item)">删除</button>
+                  <button class="btn-ghost px-3 py-1 text-error-600" :disabled="actingId === `submission-${item.id}` || item.is_deleted" @click="deleteSubmission(item)">删除</button>
                 </div>
               </td>
             </tr>
@@ -450,7 +450,7 @@ function formatDate(value) {
                 <td class="px-4 py-3 text-text-secondary">{{ selectedOptionLabel(answer) }} <span class="text-xs">#{{ answer.selected_option_id }}</span></td>
                 <td class="px-4 py-3 text-maple-600">{{ correctOptionLabel(answer) }} <span class="text-xs">#{{ answer.correct_option_id }}</span></td>
                 <td class="px-4 py-3">
-                  <span :class="answer.is_correct ? 'text-maple-600' : 'text-red-600'">{{ answer.is_correct ? '正确' : '错误' }}</span>
+                  <span :class="answer.is_correct ? 'text-maple-600' : 'text-error-600'">{{ answer.is_correct ? '正确' : '错误' }}</span>
                 </td>
               </tr>
             </tbody>
@@ -517,7 +517,7 @@ function formatDate(value) {
               <div v-for="(option, index) in bankForm.options" :key="index" class="flex items-center gap-2">
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-maple-100 text-xs font-medium text-maple-700">{{ index + 1 }}</span>
                 <input v-model="option.option_text" class="input-base min-w-0" :placeholder="`选项 ${index + 1}`" />
-                <button class="btn-ghost px-2 py-1 text-red-600" :disabled="bankForm.options.length <= 2" @click="removeBankOption(index)">移除</button>
+                <button class="btn-ghost px-2 py-1 text-error-600" :disabled="bankForm.options.length <= 2" @click="removeBankOption(index)">移除</button>
               </div>
             </div>
           </div>
@@ -548,7 +548,7 @@ function formatDate(value) {
               </div>
               <div class="flex shrink-0 items-center gap-2">
                 <button class="btn-ghost px-3 py-1 text-maple-600" @click="editBankQuestion(question)">编辑</button>
-                <button class="btn-ghost px-3 py-1 text-red-600" :disabled="actingId === `bank-${question.id}`" @click="deleteBankQuestion(question)">删除</button>
+                <button class="btn-ghost px-3 py-1 text-error-600" :disabled="actingId === `bank-${question.id}`" @click="deleteBankQuestion(question)">删除</button>
               </div>
             </div>
           </article>

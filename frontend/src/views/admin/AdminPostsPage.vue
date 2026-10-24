@@ -56,7 +56,7 @@ onMounted(fetchContent)
 <template>
   <div class="space-y-6 animate-fade-in">
     <h2 class="page-title">内容管理</h2>
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <TabBar
       :tabs="[{ key: 'posts', label: '动态' }, { key: 'comments', label: '评论' }]"
@@ -113,7 +113,7 @@ onMounted(fetchContent)
             <td class="px-4 py-3 text-right">
               <button
                 @click="deletePost(post)"
-                class="btn-ghost text-xs text-red-500 hover:text-red-600"
+                class="btn-ghost text-xs text-error-500 hover:text-error-600"
                 aria-label="删除动态"
               >
                 <Icon name="trash2" :size="14" />
@@ -148,7 +148,7 @@ onMounted(fetchContent)
             <td class="px-4 py-3 text-right">
               <button
                 @click="deleteComment(comment)"
-                class="btn-ghost text-xs text-red-500 hover:text-red-600"
+                class="btn-ghost text-xs text-error-500 hover:text-error-600"
                 aria-label="删除评论"
               >
                 <Icon name="trash2" :size="14" />

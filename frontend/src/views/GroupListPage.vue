@@ -6,6 +6,7 @@ import { groupApi } from '@/api/plugin'
 import { useToast } from '@/composables/useToast'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
@@ -28,7 +29,9 @@ async function fetchGroups() {
   try {
     const res = await groupApi.list()
     groups.value = res.data || []
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('小组加载失败')
+  } finally {
     loading.value = false
   }
 }
@@ -91,11 +94,12 @@ function goToDetail(id) {
       </div>
     </div>
 
-    <div v-else-if="!groups.length" class="text-center text-text-secondary py-16">
-      <Icon name="users" :size="48" class="mx-auto mb-3 text-maple-300" />
-      <p class="text-lg mb-2">还没有小组</p>
-      <p class="text-sm">创建一个吧</p>
-    </div>
+    <EmptyState
+      v-else-if="!groups.length"
+      icon="users"
+      title="还没有小组"
+      description="创建一个吧，找到同好"
+    />
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div
@@ -154,7 +158,7 @@ function goToDetail(id) {
           <ToggleSwitch v-model="createForm.is_public" />
         </label>
       </div>
-      <p v-if="createError" class="text-red-500 text-sm">{{ createError }}</p>
+      <p v-if="createError" class="text-error-500 text-sm">{{ createError }}</p>
       <div class="flex gap-3 mt-6 justify-end">
         <button
           @click="showCreateModal = false"

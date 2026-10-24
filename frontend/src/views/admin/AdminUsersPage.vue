@@ -36,7 +36,7 @@ onMounted(fetchUsers)
 <template>
   <div class="space-y-6 animate-fade-in">
     <h2 class="page-title">用户管理</h2>
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div v-if="loading" class="card-base overflow-hidden">
       <div class="space-y-0">
@@ -81,10 +81,10 @@ onMounted(fetchUsers)
               <span
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
                 :class="user.is_active
-                  ? 'bg-green-50 text-green-600'
-                  : 'bg-red-50 text-red-500'"
+                  ? 'bg-success-50 text-success-600'
+                  : 'bg-error-50 text-error-500'"
               >
-                <span class="w-1.5 h-1.5 rounded-full" :class="user.is_active ? 'bg-green-500' : 'bg-red-400'" />
+                <span class="w-1.5 h-1.5 rounded-full" :class="user.is_active ? 'bg-success-500' : 'bg-error-400'" />
                 {{ user.is_active ? '正常' : '禁用' }}
               </span>
             </td>

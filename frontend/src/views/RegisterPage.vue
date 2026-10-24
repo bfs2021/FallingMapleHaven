@@ -76,15 +76,15 @@ async function handleRegister() {
         <p class="text-text-secondary text-center text-sm mb-8">创建你的账号</p>
         <form @submit.prevent="handleRegister" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-username">用户名 <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-username">用户名 <span class="text-error-500">*</span></label>
             <input id="reg-username" v-model="username" type="text" placeholder="请输入用户名" class="input-base" autocomplete="username" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-nickname">昵称 <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-nickname">昵称 <span class="text-error-500">*</span></label>
             <input id="reg-nickname" v-model="nickname" type="text" placeholder="请输入昵称" class="input-base" autocomplete="name" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-password">密码 <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-password">密码 <span class="text-error-500">*</span></label>
             <div class="relative">
               <input id="reg-password" v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="至少8位，需包含字母、数字和特殊字符" class="input-base !pr-10" autocomplete="new-password" />
               <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-maple-600 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center" :aria-label="showPassword ? '隐藏密码' : '显示密码'">
@@ -96,7 +96,7 @@ async function handleRegister() {
             </p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-confirm">确认密码 <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-text-primary mb-1.5" for="reg-confirm">确认密码 <span class="text-error-500">*</span></label>
             <div class="relative">
               <input id="reg-confirm" v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'" placeholder="再次输入密码" class="input-base !pr-10" autocomplete="new-password" />
               <button type="button" @click="showConfirm = !showConfirm" class="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-maple-600 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center" :aria-label="showConfirm ? '隐藏密码' : '显示密码'">
@@ -109,7 +109,7 @@ async function handleRegister() {
             <input id="reg-email" v-model="email" type="email" placeholder="example@mail.com" class="input-base" autocomplete="email" />
           </div>
           <Transition name="fade">
-            <p v-if="error" class="text-red-500 text-sm flex items-center gap-1.5">
+            <p v-if="error" class="text-error-500 text-sm flex items-center gap-1.5">
               <Icon name="alertCircle" :size="14" /> {{ error }}
             </p>
           </Transition>

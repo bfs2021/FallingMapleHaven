@@ -23,7 +23,7 @@ async function handleLike() {
     <button
       @click="handleLike"
       class="flex items-center gap-1.5 hover:text-maple-600 transition-colors cursor-pointer select-none"
-      :class="{ 'text-red-500': isLiked }"
+      :class="{ 'text-error-500': isLiked }"
     >
       <Icon :name="'heart'" :size="18" :fill="isLiked ? 'currentColor' : 'none'" />
       <span>{{ likeCount || '' }}</span>

@@ -293,17 +293,17 @@ function backToList() {
     </div>
 
     <template v-else>
-      <div v-if="publishErrors.length" class="card-base border border-red-200 bg-red-50/70 p-4">
+      <div v-if="publishErrors.length" class="card-base border border-error-200 bg-error-50/70 p-4">
         <div class="flex items-start gap-3">
-          <Icon name="alertCircle" :size="18" class="mt-0.5 shrink-0 text-red-600" />
+          <Icon name="alertCircle" :size="18" class="mt-0.5 shrink-0 text-error-600" />
           <div class="min-w-0 space-y-2">
-            <p class="text-sm font-semibold text-red-700">提交前校验未通过</p>
-            <div v-if="globalPublishErrors.length" class="space-y-1 text-sm text-red-700">
+            <p class="text-sm font-semibold text-error-700">提交前校验未通过</p>
+            <div v-if="globalPublishErrors.length" class="space-y-1 text-sm text-error-700">
               <p v-for="(error, index) in globalPublishErrors" :key="`${error.message}-${index}`" class="leading-5">
                 {{ error.message }}
               </p>
             </div>
-            <p v-if="Array.from(questionPublishErrorMap.keys()).length" class="text-xs text-red-600">
+            <p v-if="Array.from(questionPublishErrorMap.keys()).length" class="text-xs text-error-600">
               第 {{ Array.from(questionPublishErrorMap.keys()).map((index) => index + 1).join('、') }} 题存在字段错误
             </p>
           </div>
@@ -388,10 +388,10 @@ function backToList() {
             <article v-for="(question, questionIndex) in form.questions" :key="question.localId" class="card-base p-5 space-y-4">
               <div class="flex items-center justify-between gap-3">
                 <h3 class="font-semibold text-text-primary">第 {{ questionIndex + 1 }} 题</h3>
-                <button v-if="!isPublished" class="btn-ghost px-3 py-1 text-red-600" @click="removeQuestion(questionIndex)">删除</button>
+                <button v-if="!isPublished" class="btn-ghost px-3 py-1 text-error-600" @click="removeQuestion(questionIndex)">删除</button>
               </div>
 
-              <div v-if="questionPublishErrorMap.get(questionIndex)" class="space-y-2 rounded-xl border border-red-200 bg-red-50/70 px-3 py-2 text-sm text-red-700">
+              <div v-if="questionPublishErrorMap.get(questionIndex)" class="space-y-2 rounded-xl border border-error-200 bg-error-50/70 px-3 py-2 text-sm text-error-700">
                 <p v-for="(message, index) in questionPublishErrorMap.get(questionIndex).general" :key="`q-${questionIndex}-general-${index}`" class="leading-5">
                   {{ message }}
                 </p>
@@ -412,7 +412,7 @@ function backToList() {
                   <span class="text-xs text-text-secondary">{{ question.question_text.length }}/80</span>
                 </div>
                 <input v-model="question.question_text" maxlength="80" class="input-base" :disabled="isPublished" placeholder="输入题目" />
-                <p v-if="questionPublishErrorMap.get(questionIndex)?.questionText?.length" class="text-xs leading-5 text-red-600">
+                <p v-if="questionPublishErrorMap.get(questionIndex)?.questionText?.length" class="text-xs leading-5 text-error-600">
                   {{ questionPublishErrorMap.get(questionIndex).questionText[0] }}
                 </p>
               </div>
@@ -433,12 +433,12 @@ function backToList() {
                     答案
                   </label>
                   <input v-model="option.option_text" maxlength="30" class="input-base flex-1" :disabled="isPublished" :placeholder="`选项 ${optionIndex + 1}`" />
-                  <button v-if="!isPublished" class="btn-ghost justify-center px-3 py-1 text-red-600" :disabled="question.options.length <= 1" @click="removeOption(question, optionIndex)">移除</button>
+                  <button v-if="!isPublished" class="btn-ghost justify-center px-3 py-1 text-error-600" :disabled="question.options.length <= 1" @click="removeOption(question, optionIndex)">移除</button>
                 </div>
-                <p v-if="questionPublishErrorMap.get(questionIndex)?.correctOption?.length" class="text-xs leading-5 text-red-600">
+                <p v-if="questionPublishErrorMap.get(questionIndex)?.correctOption?.length" class="text-xs leading-5 text-error-600">
                   {{ questionPublishErrorMap.get(questionIndex).correctOption[0] }}
                 </p>
-                <p v-if="questionPublishErrorMap.get(questionIndex)?.options?.length" class="text-xs leading-5 text-red-600">
+                <p v-if="questionPublishErrorMap.get(questionIndex)?.options?.length" class="text-xs leading-5 text-error-600">
                   {{ questionPublishErrorMap.get(questionIndex).options[0] }}
                 </p>
               </div>

@@ -3,10 +3,12 @@ import { ref, watch } from 'vue'
 import { postApi } from '@/api/posts'
 import { useAuthStore } from '@/stores/auth'
 import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
 import { relativeTime } from '@/utils/time'
 import AvatarImage from './AvatarImage.vue'
 
 const { confirm: confirmDelete } = useConfirm()
+const toast = useToast()
 
 const props = defineProps({
   postId: { type: Number, required: true },
@@ -28,7 +30,9 @@ async function submitComment() {
     await postApi.createComment(props.postId, newComment.value.trim())
     newComment.value = ''
     emit('comment-added')
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('评论发送失败')
+  } finally {
     submitting.value = false
   }
 }
@@ -47,7 +51,9 @@ async function deleteComment(comment) {
   try {
     await postApi.deleteComment(comment.id)
     emit('comment-deleted', comment.id)
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('删除失败')
+  } finally {
     const next = { ...deletingIds.value }
     delete next[comment.id]
     deletingIds.value = next
@@ -70,7 +76,7 @@ async function deleteComment(comment) {
             v-if="canDelete(comment)"
             @click="deleteComment(comment)"
             :disabled="deletingIds[comment.id]"
-            class="ml-auto text-xs text-text-secondary hover:text-red-500 transition-colors disabled:opacity-50 cursor-pointer"
+            class="ml-auto text-xs text-text-secondary hover:text-error-500 transition-colors disabled:opacity-50 cursor-pointer"
           >
             删除
           </button>

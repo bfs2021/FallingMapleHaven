@@ -4,12 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { profileApi } from '@/api/profiles'
 import { useConfirm } from '@/composables/useConfirm'
+import { useToast } from '@/composables/useToast'
 import { relativeTime } from '@/utils/time'
 import AvatarImage from '@/components/AvatarImage.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const toast = useToast()
 const { confirm: confirmDelete } = useConfirm()
 
 const entries = ref([])
@@ -26,7 +29,9 @@ onMounted(async () => {
   try {
     const res = await profileApi.guestbook(targetUserId.value, { page: 1, page_size: 20 })
     entries.value = res.data?.results || []
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('留言加载失败')
+  } finally {
     loading.value = false
   }
 })
@@ -38,7 +43,9 @@ async function submitEntry() {
     const res = await profileApi.createGuestbook(targetUserId.value, newContent.value.trim())
     entries.value.unshift(res.data)
     newContent.value = ''
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('留言发布失败')
+  } finally {
     submitting.value = false
   }
 }
@@ -52,7 +59,9 @@ async function replyEntry(entryId) {
       e.id === entryId ? { ...e, reply: res.data?.reply || text.trim() } : e
     )
     replyTexts.value[entryId] = ''
-  } catch { /* ignore */ }
+  } catch {
+    toast.error('回复失败')
+  }
 }
 
 async function deleteEntry(entryId) {
@@ -60,7 +69,9 @@ async function deleteEntry(entryId) {
   try {
     await profileApi.deleteGuestbook(entryId)
     entries.value = entries.value.filter(e => e.id !== entryId)
-  } catch { /* ignore */ }
+  } catch {
+    toast.error('删除失败')
+  }
 }
 </script>
 
@@ -95,9 +106,7 @@ async function deleteEntry(entryId) {
 
     <div v-if="loading" class="text-center text-text-secondary py-12">加载中...</div>
 
-    <div v-else-if="!entries.length" class="text-center py-16 text-text-secondary">
-      <p>暂无留言</p>
-    </div>
+    <EmptyState v-else-if="!entries.length" icon="mail" title="暂无留言" description="来留下第一条留言吧" />
 
     <div v-else class="space-y-3">
       <div
@@ -133,7 +142,7 @@ async function deleteEntry(entryId) {
             <button
               v-if="isOwner"
               @click="deleteEntry(entry.id)"
-              class="mt-1 text-xs text-red-400 hover:text-red-500 transition-colors cursor-pointer"
+              class="mt-1 text-xs text-error-400 hover:text-error-500 transition-colors cursor-pointer"
             >
               删除
             </button>

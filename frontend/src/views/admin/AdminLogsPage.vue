@@ -73,7 +73,7 @@ onMounted(async () => {
 <template>
   <div class="space-y-6 animate-fade-in">
     <h2 class="page-title">操作日志</h2>
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div class="card-base p-4 flex items-center gap-4 flex-wrap">
       <div class="flex items-center gap-2">

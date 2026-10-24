@@ -1,3 +1,5 @@
+import colors from 'tailwindcss/colors'
+
 export default {
   content: ['./index.html', './src/**/*.{vue,js,ts}'],
   theme: {
@@ -9,6 +11,8 @@ export default {
           600: '#C73B1D', 700: '#A32E16', 800: '#7A2210',
           900: '#52160B',
         },
+        error: colors.red,
+        success: colors.green,
         text: { primary: '#2D2D2D', secondary: '#8C8C8C' },
         border: '#E8DDD4',
       },

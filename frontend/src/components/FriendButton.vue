@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useFriendStore } from '@/stores/friend'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   userId: { type: [Number, String], required: true },
@@ -10,6 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(['status-changed'])
 const friendStore = useFriendStore()
+const toast = useToast()
 const loading = ref(false)
 
 async function sendRequest() {
@@ -17,7 +19,9 @@ async function sendRequest() {
   try {
     await friendStore.sendRequest(props.userId)
     emit('status-changed', 'pending_sent')
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('发送申请失败')
+  } finally {
     loading.value = false
   }
 }
@@ -28,7 +32,9 @@ async function handleRequest(action) {
     const params = props.requestId != null ? { request_id: props.requestId } : { from_user_id: props.userId }
     await friendStore.handleRequest(params, action)
     emit('status-changed', action === 'accept' ? 'accepted' : 'none')
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('操作失败')
+  } finally {
     loading.value = false
   }
 }
@@ -38,7 +44,9 @@ async function unfriend() {
   try {
     await friendStore.unfriend(props.userId)
     emit('status-changed', 'none')
-  } catch { /* ignore */ } finally {
+  } catch {
+    toast.error('操作失败')
+  } finally {
     loading.value = false
   }
 }
@@ -77,11 +85,11 @@ async function unfriend() {
       </button>
     </template>
     <template v-else-if="friendStatus === 'accepted'">
-      <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-lg">好友</span>
+      <span class="px-3 py-1 bg-success-100 text-success-700 text-xs rounded-lg">好友</span>
       <button
         @click="unfriend"
         :disabled="loading"
-        class="text-xs text-text-secondary hover:text-red-500 transition-colors cursor-pointer"
+        class="text-xs text-text-secondary hover:text-error-500 transition-colors cursor-pointer"
       >
         解除好友
       </button>

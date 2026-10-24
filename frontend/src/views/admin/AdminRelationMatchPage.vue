@@ -109,7 +109,7 @@ onMounted(fetchAll)
       </button>
     </div>
 
-    <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-sm text-error-500">{{ error }}</p>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div v-for="card in statCards" :key="card.label" class="card-base p-4 space-y-1">

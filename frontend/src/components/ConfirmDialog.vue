@@ -34,7 +34,7 @@ watch(() => dialogState.visible, (v) => {
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
               :class="dialogState.variant === 'danger'
-                ? 'bg-red-50 text-red-500'
+                ? 'bg-error-50 text-error-500'
                 : 'bg-maple-50 text-maple-600'"
             >
               <Icon :name="dialogState.variant === 'danger' ? 'alertTriangle' : 'helpCircle'" :size="20" />
@@ -56,7 +56,7 @@ watch(() => dialogState.visible, (v) => {
             <button
               class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ease-out cursor-pointer select-none inline-flex items-center gap-1.5"
               :class="dialogState.variant === 'danger'
-                ? 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 active:scale-[0.97]'
+                ? 'bg-error-500 text-white hover:bg-error-600 active:bg-error-700 active:scale-[0.97]'
                 : 'btn-primary'"
               @click="resolveConfirm(true)"
             >
