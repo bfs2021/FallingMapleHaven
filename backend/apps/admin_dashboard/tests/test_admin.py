@@ -237,6 +237,15 @@ class TestAdminUserListView:
         assert data["total"] == 1
         assert data["results"][0]["nickname"] == "Charlie"
 
+    def test_search_by_id(self, staff_client, alice):
+        data = assert_ok(staff_client.get(f"{URL}/users/?search={alice.pk}"))
+        assert data["total"] == 1
+        assert data["results"][0]["id"] == alice.pk
+
+    def test_search_numeric_without_a_matching_id(self, staff_client):
+        data = assert_ok(staff_client.get(f"{URL}/users/?search=999999"))
+        assert data["total"] == 0
+
     def test_search_no_match(self, staff_client):
         data = assert_ok(staff_client.get(f"{URL}/users/?search=nonexistent"))
         assert data["total"] == 0

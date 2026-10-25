@@ -190,11 +190,16 @@ class AdminUserListView(APIView, AdminPermissionMixin):
         search = request.query_params.get("search", "").strip()
         users = User.objects.all()
         if search:
-            users = users.filter(
-                Q(username__icontains=search)
-                | Q(nickname__icontains=search)
-                | Q(email__icontains=search)
-            )
+            if search.isdigit():
+                # The search box promises lookup by ID; a numeric query is
+                # that lookup, not a substring match over names and emails.
+                users = users.filter(id=int(search))
+            else:
+                users = users.filter(
+                    Q(username__icontains=search)
+                    | Q(nickname__icontains=search)
+                    | Q(email__icontains=search)
+                )
         users = users.order_by("-date_joined")
         page = safe_int(request.query_params.get("page"), 1)
         page_size = 20
